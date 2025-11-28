@@ -1,229 +1,506 @@
-import { BarChart3, AlertCircle, CheckCircle2, Clock, Users, TrendingUp, TrendingDown } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import React, { useState, useEffect } from 'react';
+import { Download, Filter, Search, Eye, Bell, CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Issue, IssueCategory, IssuePriority, IssueStatus } from '@/types';
+import { generateSingleIssueReport, generateAllIssuesReport } from '@/utils/pdfGenerator';
+import { getPendingApprovalCount } from '@/utils/approvalWorkflow';
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import NotificationPopup from '@/components/NotificationPopup';
+import useNotifications from '@/hooks/useNotifications';
 
 const AdminDashboard = () => {
-  const stats = [
-    {
-      title: "Total Issues",
-      value: "248",
-      change: "+12.5%",
-      trend: "up",
-      icon: BarChart3,
-      color: "text-primary",
-    },
-    {
-      title: "Pending Issues",
-      value: "42",
-      change: "-8.2%",
-      trend: "down",
-      icon: Clock,
-      color: "text-warning",
-    },
-    {
-      title: "Resolved Issues",
-      value: "189",
-      change: "+18.3%",
-      trend: "up",
-      icon: CheckCircle2,
-      color: "text-success",
-    },
-    {
-      title: "Active Users",
-      value: "156",
-      change: "+5.4%",
-      trend: "up",
-      icon: Users,
-      color: "text-secondary",
-    },
-  ];
+  const navigate = useNavigate();
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [latestNotification, setLatestNotification] = useState<any>(null);
+  
+  const { notifications, unreadCount, markAsRead } = useNotifications('admin');
 
-  const recentIssues = [
-    {
-      id: "DIMS-2025-0042",
-      title: "Projector not working in Room 301",
-      status: "pending",
-      priority: "high",
-      reporter: "Dr. Sarah Smith",
-      time: "10 minutes ago",
-    },
-    {
-      id: "DIMS-2025-0041",
-      title: "Air conditioning issue in Lab 2",
-      status: "in-progress",
-      priority: "medium",
-      reporter: "John Doe",
-      time: "1 hour ago",
-    },
-    {
-      id: "DIMS-2025-0040",
-      title: "Broken chairs in Classroom 205",
-      status: "completed",
-      priority: "low",
-      reporter: "Emily Johnson",
-      time: "2 hours ago",
-    },
-    {
-      id: "DIMS-2025-0039",
-      title: "Network connectivity problem",
-      status: "in-progress",
-      priority: "critical",
-      reporter: "Prof. Michael Brown",
-      time: "3 hours ago",
-    },
-    {
-      id: "DIMS-2025-0038",
-      title: "Whiteboard markers needed",
-      status: "completed",
-      priority: "low",
-      reporter: "Class Rep - CSE",
-      time: "5 hours ago",
-    },
-  ];
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      pending: "secondary",
-      "in-progress": "default",
-      completed: "outline",
-    };
-    return <Badge variant={variants[status] || "default"}>{status.replace("-", " ")}</Badge>;
+  // Load issues from localStorage
+  const loadIssues = () => {
+    try {
+      const stored = localStorage.getItem('dims-issues');
+      if (stored) {
+        const parsedIssues: Issue[] = JSON.parse(stored);
+        setIssues(parsedIssues);
+        setFilteredIssues(parsedIssues);
+      }
+    } catch (error) {
+      console.error('Error loading issues:', error);
+    }
   };
 
-  const getPriorityBadge = (priority: string) => {
-    const colors: Record<string, string> = {
-      critical: "bg-destructive text-destructive-foreground",
-      high: "bg-warning text-warning-foreground",
-      medium: "bg-accent text-accent-foreground",
-      low: "bg-muted text-muted-foreground",
+  // Load pending approvals count
+  const loadPendingApprovals = () => {
+    const count = getPendingApprovalCount();
+    setPendingApprovalsCount(count);
+  };
+
+  useEffect(() => {
+    loadIssues();
+    loadPendingApprovals();
+
+    // Listen for storage changes
+    const handleStorageChange = () => {
+      loadIssues();
+      loadPendingApprovals();
     };
-    return <Badge className={colors[priority]}>{priority}</Badge>;
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Show latest notification as popup
+  useEffect(() => {
+    if (notifications.length > 0 && !notifications[0].read) {
+      setLatestNotification(notifications[0]);
+    }
+  }, [notifications]);
+
+  // Filter issues
+  useEffect(() => {
+    let filtered = [...issues];
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        issue =>
+          issue.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          issue.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          issue.id.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(issue => issue.category === categoryFilter);
+    }
+
+    // Priority filter
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter(issue => issue.priority === priorityFilter);
+    }
+
+    // Location filter
+    if (locationFilter !== 'all') {
+      filtered = filtered.filter(issue => issue.location.type === locationFilter);
+    }
+
+    setFilteredIssues(filtered);
+  }, [issues, searchTerm, categoryFilter, priorityFilter, locationFilter]);
+
+  // Group issues by status
+  const pendingIssues = filteredIssues.filter(i => i.status === IssueStatus.PENDING);
+  const inProgressIssues = filteredIssues.filter(i => i.status === IssueStatus.IN_PROGRESS);
+  const resolvedIssues = filteredIssues.filter(i => i.status === IssueStatus.RESOLVED || i.status === IssueStatus.CLOSED);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case IssueStatus.PENDING:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case IssueStatus.IN_PROGRESS:
+        return 'bg-blue-100 text-blue-800 border-blue-300';
+      case IssueStatus.RESOLVED:
+      case IssueStatus.CLOSED:
+        return 'bg-green-100 text-green-800 border-green-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case IssuePriority.CRITICAL:
+        return 'bg-red-500 text-white';
+      case IssuePriority.HIGH:
+        return 'bg-orange-500 text-white';
+      case IssuePriority.MEDIUM:
+        return 'bg-yellow-500 text-white';
+      case IssuePriority.LOW:
+        return 'bg-green-500 text-white';
+      default:
+        return 'bg-gray-500 text-white';
+    }
+  };
+
+  const IssueCard = ({ issue }: { issue: Issue }) => (
+    <Card className="mb-3 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedIssue(issue)}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-mono text-gray-500">{issue.id}</span>
+              <Badge className={getPriorityColor(issue.priority)} variant="secondary">
+                {issue.priority}
+              </Badge>
+            </div>
+            <h4 className="font-semibold text-sm line-clamp-2">{issue.title}</h4>
+          </div>
+        </div>
+        
+        <p className="text-xs text-gray-600 line-clamp-2 mb-2">{issue.description}</p>
+        
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>{issue.location.name}</span>
+          <span>{format(new Date(issue.createdAt), 'MMM dd')}</span>
+        </div>
+        
+        <div className="mt-2 pt-2 border-t flex items-center justify-between">
+          <span className="text-xs text-gray-600">{issue.reporterName}</span>
+          <Badge variant="outline" className="text-xs">
+            {issue.category}
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const handleGenerateReport = (type: 'single' | 'all') => {
+    if (type === 'single' && selectedIssue) {
+      generateSingleIssueReport(selectedIssue);
+    } else if (type === 'all') {
+      generateAllIssuesReport(filteredIssues);
+    }
+    setShowReportDialog(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
+      {/* Notification Popup */}
+      {latestNotification && (
+        <NotificationPopup
+          notification={latestNotification}
+          onClose={() => setLatestNotification(null)}
+          onRead={markAsRead}
+        />
+      )}
+
       {/* Header */}
-      <header className="bg-card border-b shadow-sm">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Welcome back, Administrator</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline">View Reports</Button>
-            <Button>New Issue</Button>
+      <header className="bg-card border-b shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+              <p className="text-sm text-muted-foreground">Manage all infrastructure issues</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/admin/approvals')}
+                className="relative"
+              >
+                <Bell className="w-4 h-4 mr-2" />
+                Approvals
+                {pendingApprovalsCount > 0 && (
+                  <Badge className="ml-2 bg-red-500 text-white">{pendingApprovalsCount}</Badge>
+                )}
+              </Button>
+              <Button onClick={() => setShowReportDialog(true)}>
+                <Download className="w-4 h-4 mr-2" />
+                Generate Report
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat) => (
-            <Card key={stat.title} className="shadow-card transition-smooth hover:shadow-lg">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <stat.icon className={`w-10 h-10 ${stat.color}`} />
-                  <div className={`flex items-center gap-1 text-sm ${stat.trend === "up" ? "text-success" : "text-destructive"}`}>
-                    {stat.trend === "up" ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    {stat.change}
-                  </div>
-                </div>
+      <main className="container mx-auto px-6 py-6">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">{stat.title}</p>
-                  <p className="text-3xl font-bold">{stat.value}</p>
+                  <p className="text-sm text-muted-foreground">Total Issues</p>
+                  <p className="text-2xl font-bold">{issues.length}</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle>Issue Trends (Last 30 Days)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
-                <BarChart3 className="w-16 h-16 opacity-20" />
+                <AlertCircle className="w-8 h-8 text-blue-500" />
               </div>
             </CardContent>
           </Card>
-
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle>Issues by Category</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { category: "Equipment", count: 82, color: "bg-primary" },
-                  { category: "Infrastructure", count: 64, color: "bg-secondary" },
-                  { category: "Cleanliness", count: 48, color: "bg-accent" },
-                  { category: "Safety", count: 32, color: "bg-warning" },
-                  { category: "Other", count: 22, color: "bg-muted" },
-                ].map((item) => (
-                  <div key={item.category}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">{item.category}</span>
-                      <span className="text-sm text-muted-foreground">{item.count}</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color}`} style={{ width: `${(item.count / 248) * 100}%` }} />
-                    </div>
-                  </div>
-                ))}
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Pending</p>
+                  <p className="text-2xl font-bold">{pendingIssues.length}</p>
+                </div>
+                <Clock className="w-8 h-8 text-yellow-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">In Progress</p>
+                  <p className="text-2xl font-bold">{inProgressIssues.length}</p>
+                </div>
+                <AlertCircle className="w-8 h-8 text-blue-500" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Resolved</p>
+                  <p className="text-2xl font-bold">{resolvedIssues.length}</p>
+                </div>
+                <CheckCircle className="w-8 h-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Recent Issues Table */}
-        <Card className="shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent Issues</CardTitle>
-            <Button variant="outline" size="sm">View All</Button>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Issue ID</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Title</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Status</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Priority</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Reporter</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Time</th>
-                    <th className="text-left py-3 px-4 font-semibold text-sm">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentIssues.map((issue) => (
-                    <tr key={issue.id} className="border-b hover:bg-muted/50 transition-colors">
-                      <td className="py-3 px-4">
-                        <span className="font-mono text-sm">{issue.id}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-medium">{issue.title}</span>
-                      </td>
-                      <td className="py-3 px-4">{getStatusBadge(issue.status)}</td>
-                      <td className="py-3 px-4">{getPriorityBadge(issue.priority)}</td>
-                      <td className="py-3 px-4 text-sm">{issue.reporter}</td>
-                      <td className="py-3 px-4 text-sm text-muted-foreground">{issue.time}</td>
-                      <td className="py-3 px-4">
-                        <Button variant="ghost" size="sm">View</Button>
-                      </td>
-                    </tr>
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Search issues..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {Object.values(IssueCategory).map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
-                </tbody>
-              </table>
+                </SelectContent>
+              </Select>
+              
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  {Object.values(IssuePriority).map(pri => (
+                    <SelectItem key={pri} value={pri}>{pri}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={locationFilter} onValueChange={setLocationFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Locations</SelectItem>
+                  <SelectItem value="classroom">Classrooms</SelectItem>
+                  <SelectItem value="laboratory">Laboratories</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
+
+        {/* Issue Columns */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Pending Column */}
+          <div>
+            <Card className="mb-4 bg-yellow-50 border-yellow-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-yellow-600" />
+                  Pending ({pendingIssues.length})
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {pendingIssues.map(issue => (
+                <IssueCard key={issue.id} issue={issue} />
+              ))}
+              {pendingIssues.length === 0 && (
+                <p className="text-center text-gray-500 text-sm py-8">No pending issues</p>
+              )}
+            </div>
+          </div>
+
+          {/* In Progress Column */}
+          <div>
+            <Card className="mb-4 bg-blue-50 border-blue-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-blue-600" />
+                  In Progress ({inProgressIssues.length})
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {inProgressIssues.map(issue => (
+                <IssueCard key={issue.id} issue={issue} />
+              ))}
+              {inProgressIssues.length === 0 && (
+                <p className="text-center text-gray-500 text-sm py-8">No issues in progress</p>
+              )}
+            </div>
+          </div>
+
+          {/* Resolved Column */}
+          <div>
+            <Card className="mb-4 bg-green-50 border-green-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  Resolved ({resolvedIssues.length})
+                </CardTitle>
+              </CardHeader>
+            </Card>
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {resolvedIssues.map(issue => (
+                <IssueCard key={issue.id} issue={issue} />
+              ))}
+              {resolvedIssues.length === 0 && (
+                <p className="text-center text-gray-500 text-sm py-8">No resolved issues</p>
+              )}
+            </div>
+          </div>
+        </div>
       </main>
+
+      {/* Issue Details Dialog */}
+      {selectedIssue && (
+        <Dialog open={!!selectedIssue} onOpenChange={() => setSelectedIssue(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{selectedIssue.title}</DialogTitle>
+              <DialogDescription>Issue ID: {selectedIssue.id}</DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Status</p>
+                  <Badge className={getStatusColor(selectedIssue.status)}>
+                    {selectedIssue.status}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Priority</p>
+                  <Badge className={getPriorityColor(selectedIssue.priority)}>
+                    {selectedIssue.priority}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Category</p>
+                  <p className="text-sm">{selectedIssue.category}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Reporter</p>
+                  <p className="text-sm">{selectedIssue.reporterName}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-semibold text-gray-600 mb-1">Description</p>
+                <p className="text-sm">{selectedIssue.description}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm font-semibold text-gray-600 mb-1">Location</p>
+                <p className="text-sm">
+                  {selectedIssue.location.name} - {selectedIssue.location.building}
+                  {selectedIssue.location.floor && `, Floor ${selectedIssue.location.floor}`}
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Created</p>
+                  <p className="text-sm">{format(new Date(selectedIssue.createdAt), 'PPpp')}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Updated</p>
+                  <p className="text-sm">{format(new Date(selectedIssue.updatedAt), 'PPpp')}</p>
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSelectedIssue(null)}>
+                Close
+              </Button>
+              <Button onClick={() => {
+                generateSingleIssueReport(selectedIssue);
+                setSelectedIssue(null);
+              }}>
+                <Download className="w-4 h-4 mr-2" />
+                Download Report
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Report Generation Dialog */}
+      <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Generate Report</DialogTitle>
+            <DialogDescription>
+              Choose the type of report you want to generate
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={() => handleGenerateReport('all')}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Generate Report for All Issues ({filteredIssues.length} issues)
+            </Button>
+            
+            {selectedIssue && (
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleGenerateReport('single')}
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Generate Report for Selected Issue
+              </Button>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReportDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,97 +1,178 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Building2, Eye, EyeOff, LogIn } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
+import { Eye, EyeOff, Loader2, Building2, Users, GraduationCap, Wrench, UserCheck } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserRole } from "@/types/auth";
 
 const Login = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    role: "",
-    rememberMe: false,
-  });
+  const [error, setError] = useState("");
+  const [selectedDemo, setSelectedDemo] = useState("");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const from = location.state?.from?.pathname || "/dashboard";
+
+  const demoAccounts = [
+    {
+      role: UserRole.ADMIN,
+      email: "admin@university.edu",
+      password: "admin123",
+      name: "Administrator",
+      icon: Users,
+      description: "Full system access"
+    },
+    {
+      role: UserRole.FACULTY,
+      email: "faculty@university.edu",
+      password: "faculty123",
+      name: "Faculty Member",
+      icon: GraduationCap,
+      description: "Teaching staff access"
+    },
+    {
+      role: UserRole.NON_TEACHING_STAFF,
+      email: "staff@university.edu",
+      password: "staff123",
+      name: "Non-Teaching Staff",
+      icon: Building2,
+      description: "Administrative access"
+    },
+    {
+      role: UserRole.CLASS_REP,
+      email: "rep@university.edu",
+      password: "rep123",
+      name: "Class Representative",
+      icon: UserCheck,
+      description: "Student representative"
+    },
+    {
+      role: UserRole.LAB_TECHNICIAN,
+      email: "tech@university.edu",
+      password: "tech123",
+      name: "Lab Technician",
+      icon: Wrench,
+      description: "Laboratory management"
+    }
+  ];
+
+  const handleDemoSelect = (value: string) => {
+    const account = demoAccounts.find(acc => acc.role === value);
+    if (account) {
+      setEmail(account.email);
+      setPassword(account.password);
+      setSelectedDemo(value);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError("");
 
-    // Simulate login
-    setTimeout(() => {
+    try {
+      await login({ email, password });
+      
+      // Redirect based on user role
+      if (email.includes('admin')) {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate(from, { replace: true });
+      }
+    } catch (error) {
+      setError("Invalid credentials. Please try again.");
+    } finally {
       setIsLoading(false);
-      toast.success("Login successful!");
-      window.location.href = "/admin/dashboard";
-    }, 1500);
+    }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 gradient-primary items-center justify-center p-12">
-        <div className="max-w-md text-white">
-          <div className="flex items-center gap-3 mb-6">
-            <Building2 className="w-12 h-12" />
-            <h1 className="text-4xl font-bold">DIMS</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+              <Building2 className="w-8 h-8 text-white" />
+            </div>
           </div>
-          <h2 className="text-3xl font-semibold mb-4">
-            Digital Infrastructure Management System
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome to DIMS
           </h2>
-          <p className="text-white/90 text-lg">
-            Streamline departmental infrastructure management with a unified platform for staff and students.
+          <p className="text-gray-600">
+            Digital Infrastructure Management System
           </p>
-          <div className="mt-12 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">✓</div>
-              <div>
-                <h3 className="font-semibold">Real-time Issue Tracking</h3>
-                <p className="text-white/80 text-sm">Report and monitor infrastructure issues instantly</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">✓</div>
-              <div>
-                <h3 className="font-semibold">Digital Registers</h3>
-                <p className="text-white/80 text-sm">Maintain comprehensive equipment inventories</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">✓</div>
-              <div>
-                <h3 className="font-semibold">Analytics Dashboard</h3>
-                <p className="text-white/80 text-sm">Track performance with detailed insights</p>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
-
-      {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-gradient-subtle">
-        <div className="w-full max-w-md">
-          <div className="mb-8 text-center lg:text-left">
-            <div className="flex items-center gap-2 mb-4 lg:hidden justify-center">
-              <Building2 className="w-8 h-8 text-primary" />
-              <h1 className="text-2xl font-bold">DIMS</h1>
+        
+        <Card className="shadow-xl border-0">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-xl">Sign In</CardTitle>
+            <CardDescription>
+              Access your account to manage infrastructure
+            </CardDescription>
+          </CardHeader>
+          
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-6">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
+              {/* Demo Account Selector */}
+              <div className="space-y-2">
+                <Label htmlFor="demo-account">Quick Demo Access</Label>
+                <Select value={selectedDemo} onValueChange={handleDemoSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a demo account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {demoAccounts.map((account) => {
+                      const Icon = account.icon;
+                      return (
+                        <SelectItem key={account.role} value={account.role}>
+                          <div className="flex items-center space-x-3">
+                            <Icon className="w-4 h-4" />
+              <div>
+                              <div className="font-medium">{account.name}</div>
+                              <div className="text-xs text-gray-500">{account.description}</div>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
-            <p className="text-muted-foreground">Sign in to your account to continue</p>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or enter manually</span>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="name@university.edu"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 required
                 className="h-11"
               />
@@ -104,83 +185,99 @@ const Login = () => {
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   required
                   className="h-11 pr-10"
                 />
-                <button
+                  <Button
                   type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-11 px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="role">Select Role</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
-                required
-              >
-                <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Choose your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="faculty">Faculty</SelectItem>
-                  <SelectItem value="non-teaching">Non-Teaching Staff</SelectItem>
-                  <SelectItem value="class-rep">Class Representative</SelectItem>
-                  <SelectItem value="lab-tech">Lab Technician</SelectItem>
-                </SelectContent>
-              </Select>
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="remember"
-                  checked={formData.rememberMe}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, rememberMe: checked as boolean })
-                  }
-                />
-                <label htmlFor="remember" className="text-sm text-muted-foreground cursor-pointer">
+                  <input
+                    id="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                  />
+                  <Label htmlFor="remember-me" className="text-sm">
                   Remember me
-                </label>
+                  </Label>
               </div>
-              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-primary hover:text-primary/80"
+                >
                 Forgot password?
               </Link>
             </div>
+            </CardContent>
 
+            <CardFooter className="flex flex-col space-y-4 pt-6">
             <Button type="submit" className="w-full h-11" disabled={isLoading}>
               {isLoading ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Signing in...
-                </span>
+                  </>
               ) : (
-                <span className="flex items-center gap-2">
-                  <LogIn className="w-4 h-4" />
-                  Sign In
-                </span>
+                  "Sign In"
               )}
             </Button>
-          </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
               Don't have an account?{" "}
-              <Link to="/register" className="text-primary font-medium hover:underline">
-                Register here
+                  <Link
+                    to="/register"
+                    className="font-medium text-primary hover:text-primary/80"
+                  >
+                    Create one here
               </Link>
             </p>
           </div>
+            </CardFooter>
+          </form>
+        </Card>
+        
+        {/* Demo Credentials Info */}
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <h3 className="font-semibold text-blue-900 mb-3">Demo Credentials</h3>
+            <div className="space-y-2 text-sm">
+              {demoAccounts.map((account) => {
+                const Icon = account.icon;
+                return (
+                  <div key={account.role} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Icon className="w-4 h-4 text-blue-600" />
+                      <span className="text-blue-800">{account.name}:</span>
+                    </div>
+                    <code className="text-blue-700 bg-blue-100 px-2 py-1 rounded text-xs">
+                      {account.email}
+                    </code>
+                  </div>
+                );
+              })}
         </div>
+            <p className="text-xs text-blue-600 mt-3">
+              All demo accounts use password: admin123 (for admin), faculty123 (for faculty), staff123 (for staff), rep123 (for class rep), tech123 (for lab tech)
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

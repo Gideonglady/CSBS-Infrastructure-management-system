@@ -1,8 +1,19 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Building2, ArrowRight, BarChart3, Shield, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { isAuthenticated, user } = useAuth();
+
+  // Redirect authenticated users to dashboard
+  if (isAuthenticated) {
+    // Redirect based on user role
+    if (user?.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Hero Section */}
