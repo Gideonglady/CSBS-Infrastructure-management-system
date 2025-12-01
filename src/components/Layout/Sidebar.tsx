@@ -51,12 +51,14 @@ const Sidebar: React.FC = () => {
   };
 
   const navigationItems = [
+    // Admin Dashboard - Only for admins
     {
       label: 'Dashboard',
-      href: user?.role === 'admin' ? '/admin' : '/dashboard',
+      href: '/admin',
       icon: LayoutDashboard,
-      roles: ['admin', 'faculty', 'non_teaching_staff', 'class_rep', 'lab_technician']
+      roles: ['admin']
     },
+    // Digital Registers - Admin, Faculty, Non-teaching Staff, Lab Technician
     {
       label: 'Digital Registers',
       href: '/registers',
@@ -67,40 +69,23 @@ const Sidebar: React.FC = () => {
         { label: 'Laboratories', href: '/registers/labs', icon: Microscope }
       ]
     },
+    // Issue Management - Class Rep, Faculty, Lab Tech see reporting, Admin sees dashboard
     {
       label: 'Issue Management',
-      href: user?.role === 'admin' ? '/admin/issues' : '/issues',
+      href: user?.role === 'admin' ? '/admin' : '/issues',
       icon: AlertTriangle,
-      roles: ['admin', 'faculty', 'non_teaching_staff', 'class_rep'],
+      roles: ['admin', 'class_rep', 'faculty', 'lab_technician'],
       children: user?.role === 'admin' ? [] : [
         { label: 'Report Issue', href: '/issues/report', icon: FileText },
         { label: 'My Issues', href: '/my-issues', icon: AlertTriangle }
       ]
     },
-
+    // Notifications - Everyone
     {
       label: 'Notifications',
       href: '/notifications',
       icon: Bell,
       roles: ['admin', 'faculty', 'non_teaching_staff', 'class_rep', 'lab_technician']
-    },
-    {
-      label: 'User Management',
-      href: '/users',
-      icon: Users,
-      roles: ['admin']
-    },
-    {
-      label: 'Settings',
-      href: '/settings',
-      icon: Settings,
-      roles: ['admin', 'faculty', 'non_teaching_staff', 'class_rep', 'lab_technician']
-    },
-    {
-      label: 'Audit Log',
-      href: '/audit-log',
-      icon: UserCheck,
-      roles: ['admin']
     }
   ];
 

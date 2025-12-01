@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EquipmentTransfer, EquipmentTransferData } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { createApprovalRequest, notifyAdmin } from '@/utils/approvalWorkflow';
+import { getDefaultRouteForRole } from '@/utils/roleRedirect';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -121,7 +122,7 @@ const EquipmentTransferPage = () => {
 
     // Navigate to dashboard or transfer history
     setTimeout(() => {
-      navigate('/dashboard');
+      navigate(getDefaultRouteForRole(user.role));
     }, 1500);
   };
 

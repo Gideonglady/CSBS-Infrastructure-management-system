@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 interface HeaderProps {
   onMenuClick: () => void;
 }
@@ -22,7 +24,13 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, getRoleDisplayName } = useRoleAccess();
   const { unreadCount } = useNotifications();
+  const { logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/login';
+  };
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -124,11 +132,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Help & Support</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

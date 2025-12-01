@@ -1,17 +1,11 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
 
-// Load environment variables
-dotenv.config();
-
 // Initialize Express app
 const app = express();
-
-// Connect to MongoDB
-connectDB();
 
 // Middleware
 app.use(cors({
@@ -53,8 +47,15 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📡 API URL: http://localhost:${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+
+// Connect to MongoDB before listening
+connectDB().then(() => {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        console.log(`📡 API URL: http://localhost:${PORT}`);
+        console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+    });
+}).catch(err => {
+    console.error('Failed to connect to MongoDB:', err);
+    process.exit(1);
 });
