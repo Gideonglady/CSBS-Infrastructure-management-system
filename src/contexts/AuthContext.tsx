@@ -1,53 +1,30 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { AuthContextType, AuthState, User, LoginCredentials, RegisterData, UserRole } from '@/types/auth';
+import { authAPI } from '@/services/api';
 
-// Mock authentication service - replace with actual API calls
+// Authentication service using backend API
 const authService = {
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock user data based on email
-    const mockUser: User = {
-      id: '1',
-      email: credentials.email,
-      name: credentials.email.includes('admin') ? 'Admin User' : 'John Doe',
-      role: credentials.email.includes('admin') ? UserRole.ADMIN : 
-            credentials.email.includes('faculty') ? UserRole.FACULTY :
-            credentials.email.includes('staff') ? UserRole.NON_TEACHING_STAFF :
-            credentials.email.includes('rep') ? UserRole.CLASS_REP :
-            UserRole.LAB_TECHNICIAN,
-      department: 'Computer Science',
-      phone: '+1234567890',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isActive: true
-    };
-
+    const data = await authAPI.login(credentials);
     return {
-      user: mockUser,
-      token: 'mock-jwt-token'
+      user: {
+        ...data.data.user,
+        createdAt: new Date(data.data.user.createdAt),
+        updatedAt: new Date(data.data.user.updatedAt),
+      },
+      token: data.data.token,
     };
   },
 
   async register(data: RegisterData): Promise<{ user: User; token: string }> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const mockUser: User = {
-      id: Math.random().toString(36),
-      email: data.email,
-      name: data.name,
-      role: data.role,
-      department: data.department,
-      phone: data.phone,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isActive: true
-    };
-
+    const response = await authAPI.register(data);
     return {
-      user: mockUser,
-      token: 'mock-jwt-token'
+      user: {
+        ...response.data.user,
+        createdAt: new Date(response.data.user.createdAt),
+        updatedAt: new Date(response.data.user.updatedAt),
+      },
+      token: response.data.token,
     };
   },
 
@@ -55,18 +32,16 @@ const authService = {
     const token = localStorage.getItem('token');
     if (!token) return null;
 
-    // Mock current user
-    return {
-      id: '1',
-      email: 'admin@university.edu',
-      name: 'Admin User',
-      role: UserRole.ADMIN,
-      department: 'Administration',
-      phone: '+1234567890',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isActive: true
-    };
+    try {
+      const data = await authAPI.getCurrentUser();
+      return {
+        ...data.data.user,
+        createdAt: new Date(data.data.user.createdAt),
+        updatedAt: new Date(data.data.user.updatedAt),
+      };
+    } catch (error) {
+      return null;
+    }
   }
 };
 
@@ -204,7 +179,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateProfile = async (data: Partial<User>): Promise<void> => {
     if (!state.user) return;
-    
+
     const updatedUser = { ...state.user, ...data };
     dispatch({ type: 'UPDATE_USER', payload: updatedUser });
     // TODO: Make API call to update profile

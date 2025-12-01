@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
@@ -33,7 +33,7 @@ const queryClient = new QueryClient();
 // Issue Management Landing Page Component
 const IssueManagementLanding = () => {
   const navigate = useNavigate();
-  
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Issue Management</h1>
