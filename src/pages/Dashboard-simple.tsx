@@ -110,22 +110,7 @@ const DashboardSimple: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              Welcome back, Admin User!
-            </h1>
-            <p className="text-blue-100">
-              Here's what's happening with your infrastructure today.
-            </p>
-          </div>
-          <Badge variant="secondary" className="text-sm px-3 py-1 bg-white text-blue-600">
-            Administrator
-          </Badge>
-        </div>
-      </div>
+
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -202,21 +187,12 @@ const DashboardSimple: React.FC = () => {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getPriorityColor(issue.priority)} variant="secondary">
-                            {issue.priority}
-                          </Badge>
-                        </div>
                         <h4 className="font-semibold text-sm">{issue.title}</h4>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">{issue.location}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{issue.reporter}</span>
-                      <span>{issue.createdAt}</span>
-                    </div>
                     <div className="mt-2 pt-2 border-t flex justify-end">
-                      <Button variant="ghost" size="sm" className="h-6 text-xs">View Details</Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600">View Details</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -240,21 +216,12 @@ const DashboardSimple: React.FC = () => {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getPriorityColor(issue.priority)} variant="secondary">
-                            {issue.priority}
-                          </Badge>
-                        </div>
                         <h4 className="font-semibold text-sm">{issue.title}</h4>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">{issue.location}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{issue.reporter}</span>
-                      <span>{issue.createdAt}</span>
-                    </div>
                     <div className="mt-2 pt-2 border-t flex justify-end">
-                      <Button variant="ghost" size="sm" className="h-6 text-xs">View Details</Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600">View Details</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -278,21 +245,12 @@ const DashboardSimple: React.FC = () => {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getPriorityColor(issue.priority)} variant="secondary">
-                            {issue.priority}
-                          </Badge>
-                        </div>
                         <h4 className="font-semibold text-sm">{issue.title}</h4>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">{issue.location}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{issue.reporter}</span>
-                      <span>{issue.createdAt}</span>
-                    </div>
                     <div className="mt-2 pt-2 border-t flex justify-end">
-                      <Button variant="ghost" size="sm" className="h-6 text-xs">View Details</Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600">View Details</Button>
                     </div>
                   </CardContent>
                 </Card>

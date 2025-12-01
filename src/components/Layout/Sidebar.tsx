@@ -77,12 +77,7 @@ const Sidebar: React.FC = () => {
         { label: 'My Issues', href: '/my-issues', icon: AlertTriangle }
       ]
     },
-    {
-      label: 'Analytics',
-      href: '/analytics',
-      icon: BarChart3,
-      roles: ['admin', 'faculty']
-    },
+
     {
       label: 'Notifications',
       href: '/notifications',

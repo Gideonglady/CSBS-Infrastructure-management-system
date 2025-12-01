@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import NotificationPopup from '@/components/NotificationPopup';
 import useNotifications from '@/hooks/useNotifications';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -29,15 +30,116 @@ const AdminDashboard = () => {
   
   const { notifications, unreadCount, markAsRead } = useNotifications('admin');
 
-  // Load issues from localStorage
+  // Load issues from localStorage or use mock data
   const loadIssues = () => {
     try {
       const stored = localStorage.getItem('dims-issues');
       if (stored) {
         const parsedIssues: Issue[] = JSON.parse(stored);
-        setIssues(parsedIssues);
-        setFilteredIssues(parsedIssues);
+        if (parsedIssues.length > 0) {
+          setIssues(parsedIssues);
+          setFilteredIssues(parsedIssues);
+          return;
+        }
       }
+      
+      // Mock data if storage is empty
+      const mockIssues: Issue[] = [
+        {
+          id: 'ISS-001',
+          title: 'Projector Malfunction in Lab 1',
+          description: 'The projector is flickering and turning off intermittently during lectures.',
+          status: IssueStatus.PENDING,
+          priority: IssuePriority.HIGH,
+          category: IssueCategory.EQUIPMENT,
+          location: { type: 'laboratory', name: 'Computer Lab 1', building: 'Main Block', floor: 1 },
+          reporterId: 'user1',
+          reporterName: 'Dr. Smith',
+          createdAt: new Date(Date.now() - 86400000 * 2),
+          updatedAt: new Date(),
+          comments: [],
+          attachments: []
+        },
+        {
+          id: 'ISS-002',
+          title: 'Leaking Faucet in Washroom',
+          description: 'Water is continuously dripping from the tap in the second floor washroom.',
+          status: IssueStatus.PENDING,
+          priority: IssuePriority.MEDIUM,
+          category: IssueCategory.INFRASTRUCTURE,
+          location: { type: 'other', name: 'Gents Washroom', building: 'Science Block', floor: 2 },
+          reporterId: 'user2',
+          reporterName: 'John Doe',
+          createdAt: new Date(Date.now() - 86400000),
+          updatedAt: new Date(),
+          comments: [],
+          attachments: []
+        },
+        {
+          id: 'ISS-003',
+          title: 'Network Switch Failure',
+          description: 'Internet connectivity is down in the faculty wing due to a switch failure.',
+          status: IssueStatus.IN_PROGRESS,
+          priority: IssuePriority.CRITICAL,
+          category: IssueCategory.EQUIPMENT,
+          location: { type: 'other', name: 'Faculty Wing', building: 'Admin Block', floor: 1 },
+          reporterId: 'user3',
+          reporterName: 'Admin User',
+          createdAt: new Date(Date.now() - 3600000 * 5),
+          updatedAt: new Date(),
+          comments: [],
+          attachments: []
+        },
+        {
+          id: 'ISS-004',
+          title: 'Broken Chair in Class 3B',
+          description: 'One of the student desks has a broken leg and needs replacement.',
+          status: IssueStatus.RESOLVED,
+          priority: IssuePriority.LOW,
+          category: IssueCategory.EQUIPMENT,
+          location: { type: 'classroom', name: 'Class 3B', building: 'Main Block', floor: 3 },
+          reporterId: 'user4',
+          reporterName: 'Sarah Jones',
+          createdAt: new Date(Date.now() - 86400000 * 5),
+          updatedAt: new Date(),
+          comments: [],
+          attachments: []
+        },
+        {
+          id: 'ISS-005',
+          title: 'AC Not Cooling',
+          description: 'Air conditioner in the server room is not maintaining the required temperature.',
+          status: IssueStatus.IN_PROGRESS,
+          priority: IssuePriority.HIGH,
+          category: IssueCategory.EQUIPMENT,
+          location: { type: 'other', name: 'Server Room', building: 'Admin Block', floor: 0 },
+          reporterId: 'user5',
+          reporterName: 'Mike Tech',
+          createdAt: new Date(Date.now() - 3600000 * 24),
+          updatedAt: new Date(),
+          comments: [],
+          attachments: []
+        },
+        {
+          id: 'ISS-006',
+          title: 'Whiteboard Replacement',
+          description: 'The whiteboard in Lab 2 is heavily stained and needs replacement.',
+          status: IssueStatus.RESOLVED,
+          priority: IssuePriority.LOW,
+          category: IssueCategory.INFRASTRUCTURE,
+          location: { type: 'laboratory', name: 'Physics Lab', building: 'Science Block', floor: 1 },
+          reporterId: 'user6',
+          reporterName: 'Prof. Wilson',
+          createdAt: new Date(Date.now() - 86400000 * 7),
+          updatedAt: new Date(),
+          comments: [],
+          attachments: []
+        }
+      ];
+      
+      setIssues(mockIssues);
+      setFilteredIssues(mockIssues);
+      
     } catch (error) {
       console.error('Error loading issues:', error);
     }
@@ -141,28 +243,16 @@ const AdminDashboard = () => {
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-mono text-gray-500">{issue.id}</span>
-              <Badge className={getPriorityColor(issue.priority)} variant="secondary">
-                {issue.priority}
-              </Badge>
-            </div>
             <h4 className="font-semibold text-sm line-clamp-2">{issue.title}</h4>
           </div>
         </div>
         
-        <p className="text-xs text-gray-600 line-clamp-2 mb-2">{issue.description}</p>
-        
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>{issue.location.name}</span>
-          <span>{format(new Date(issue.createdAt), 'MMM dd')}</span>
         </div>
         
-        <div className="mt-2 pt-2 border-t flex items-center justify-between">
-          <span className="text-xs text-gray-600">{issue.reporterName}</span>
-          <Badge variant="outline" className="text-xs">
-            {issue.category}
-          </Badge>
+        <div className="mt-2 pt-2 border-t flex justify-end">
+          <span className="text-xs text-blue-600 hover:underline">View Details</span>
         </div>
       </CardContent>
     </Card>
@@ -218,52 +308,127 @@ const AdminDashboard = () => {
       </header>
 
       <main className="container mx-auto px-6 py-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+
+
+        {/* Analytics Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Issue Status Chart */}
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Issues</p>
-                  <p className="text-2xl font-bold">{issues.length}</p>
-                </div>
-                <AlertCircle className="w-8 h-8 text-blue-500" />
+            <CardHeader>
+              <CardTitle className="text-lg">Issue Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Pending', value: issues.filter(i => i.status === 'pending').length, color: '#fbbf24' },
+                        { name: 'In Progress', value: issues.filter(i => i.status === 'in_progress').length, color: '#3b82f6' },
+                        { name: 'Resolved', value: issues.filter(i => i.status === 'resolved' || i.status === 'closed').length, color: '#22c55e' }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ value }) => value}
+                    >
+                      {[
+                        { name: 'Pending', value: issues.filter(i => i.status === 'pending').length, color: '#fbbf24' },
+                        { name: 'In Progress', value: issues.filter(i => i.status === 'in_progress').length, color: '#3b82f6' },
+                        { name: 'Resolved', value: issues.filter(i => i.status === 'resolved' || i.status === 'closed').length, color: '#22c55e' }
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
-          
+
+          {/* Student Strength Chart */}
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pending</p>
-                  <p className="text-2xl font-bold">{pendingIssues.length}</p>
-                </div>
-                <Clock className="w-8 h-8 text-yellow-500" />
+            <CardHeader>
+              <CardTitle className="text-lg">Students per Year</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: '1st Year', value: 450, color: '#8884d8' },
+                        { name: '2nd Year', value: 420, color: '#82ca9d' },
+                        { name: '3rd Year', value: 380, color: '#ffc658' },
+                        { name: '4th Year', value: 350, color: '#ff7300' }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ value }) => value}
+                    >
+                      {[
+                        { name: '1st Year', value: 450, color: '#8884d8' },
+                        { name: '2nd Year', value: 420, color: '#82ca9d' },
+                        { name: '3rd Year', value: 380, color: '#ffc658' },
+                        { name: '4th Year', value: 350, color: '#ff7300' }
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
-          
+
+          {/* Equipment Availability Chart */}
           <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">In Progress</p>
-                  <p className="text-2xl font-bold">{inProgressIssues.length}</p>
-                </div>
-                <AlertCircle className="w-8 h-8 text-blue-500" />
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Resolved</p>
-                  <p className="text-2xl font-bold">{resolvedIssues.length}</p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-green-500" />
+            <CardHeader>
+              <CardTitle className="text-lg">Equipment Availability</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Projectors', value: 45, color: '#0088FE' },
+                        { name: 'Computers', value: 120, color: '#00C49F' },
+                        { name: 'Printers', value: 15, color: '#FFBB28' },
+                        { name: 'Smart Boards', value: 25, color: '#FF8042' }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      label={({ value }) => value}
+                    >
+                      {[
+                        { name: 'Projectors', value: 45, color: '#0088FE' },
+                        { name: 'Computers', value: 120, color: '#00C49F' },
+                        { name: 'Printers', value: 15, color: '#FFBB28' },
+                        { name: 'Smart Boards', value: 25, color: '#FF8042' }
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>

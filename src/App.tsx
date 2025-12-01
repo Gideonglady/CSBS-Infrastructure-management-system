@@ -16,7 +16,7 @@ import Dashboard from "./pages/Dashboard";
 import DashboardSimple from "./pages/Dashboard-simple";
 import DigitalRegisters from "./pages/DigitalRegisters";
 import IssueReporting from "./pages/IssueReporting";
-import Analytics from "./pages/Analytics";
+
 import Notifications from "./pages/Notifications";
 import AuditLog from "./pages/AuditLog";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -120,14 +120,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Analytics */}
-            <Route path="/analytics" element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.FACULTY]}>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Analytics />} />
-            </Route>
+
             
             {/* Notifications */}
             <Route path="/notifications" element={
@@ -153,14 +146,7 @@ const App = () => (
                 <Layout />
               </ProtectedRoute>
             }>
-              <Route index element={<DashboardSimple />} />
-            </Route>
-            <Route path="/admin/*" element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route index element={<AdminDashboard />} />
               <Route path="approvals" element={<PendingApprovals />} />
               <Route path="users" element={<div>User Management</div>} />
               <Route path="settings" element={<div>Admin Settings</div>} />

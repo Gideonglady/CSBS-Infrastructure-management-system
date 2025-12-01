@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,10 +15,12 @@ import {
   Plus,
   Eye
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UserRole } from '@/types/auth';
 
 const Dashboard: React.FC = () => {
   const { user, getRoleDisplayName, getRoleColor } = useRoleAccess();
+  const [selectedIssue, setSelectedIssue] = useState<any>(null);
 
   // Mock data - replace with actual API calls
   const stats = {
@@ -118,22 +120,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-primary to-primary/80 rounded-lg p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">
-              Welcome back, {user?.name}!
-            </h1>
-            <p className="text-primary-foreground/80">
-              Here's what's happening with your infrastructure today.
-            </p>
-          </div>
-          <Badge variant="secondary" className={`${getRoleColor()} text-sm px-3 py-1`}>
-            {getRoleDisplayName()}
-          </Badge>
-        </div>
-      </div>
+
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -207,25 +194,16 @@ const Dashboard: React.FC = () => {
             </Card>
             <div className="space-y-3">
               {recentIssues.filter(i => i.status === 'pending').map(issue => (
-                <Card key={issue.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card key={issue.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedIssue(issue)}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getPriorityColor(issue.priority)} variant="secondary">
-                            {issue.priority}
-                          </Badge>
-                        </div>
                         <h4 className="font-semibold text-sm">{issue.title}</h4>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">{issue.location}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{issue.reporter}</span>
-                      <span>{issue.createdAt}</span>
-                    </div>
                     <div className="mt-2 pt-2 border-t flex justify-end">
-                      <Button variant="ghost" size="sm" className="h-6 text-xs">View Details</Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600">View Details</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -245,25 +223,16 @@ const Dashboard: React.FC = () => {
             </Card>
             <div className="space-y-3">
               {recentIssues.filter(i => i.status === 'in_progress').map(issue => (
-                <Card key={issue.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card key={issue.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedIssue(issue)}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getPriorityColor(issue.priority)} variant="secondary">
-                            {issue.priority}
-                          </Badge>
-                        </div>
                         <h4 className="font-semibold text-sm">{issue.title}</h4>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">{issue.location}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{issue.reporter}</span>
-                      <span>{issue.createdAt}</span>
-                    </div>
                     <div className="mt-2 pt-2 border-t flex justify-end">
-                      <Button variant="ghost" size="sm" className="h-6 text-xs">View Details</Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600">View Details</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -283,25 +252,16 @@ const Dashboard: React.FC = () => {
             </Card>
             <div className="space-y-3">
               {recentIssues.filter(i => i.status === 'resolved').map(issue => (
-                <Card key={issue.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                <Card key={issue.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedIssue(issue)}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getPriorityColor(issue.priority)} variant="secondary">
-                            {issue.priority}
-                          </Badge>
-                        </div>
                         <h4 className="font-semibold text-sm">{issue.title}</h4>
                       </div>
                     </div>
                     <p className="text-xs text-gray-600 mb-2">{issue.location}</p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{issue.reporter}</span>
-                      <span>{issue.createdAt}</span>
-                    </div>
                     <div className="mt-2 pt-2 border-t flex justify-end">
-                      <Button variant="ghost" size="sm" className="h-6 text-xs">View Details</Button>
+                      <Button variant="ghost" size="sm" className="h-6 text-xs text-blue-600">View Details</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -310,6 +270,56 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Issue Details Dialog */}
+      {selectedIssue && (
+        <Dialog open={!!selectedIssue} onOpenChange={() => setSelectedIssue(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{selectedIssue.title}</DialogTitle>
+              <DialogDescription>Issue ID: {selectedIssue.id}</DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Status</p>
+                  <Badge className={getStatusColor(selectedIssue.status)}>
+                    {selectedIssue.status}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600">Priority</p>
+                  <Badge className={getPriorityColor(selectedIssue.priority)}>
+                    {selectedIssue.priority}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-semibold text-gray-600 mb-1">Location</p>
+                <p className="text-sm">{selectedIssue.location}</p>
+              </div>
+              
+              <div>
+                <p className="text-sm font-semibold text-gray-600 mb-1">Reporter</p>
+                <p className="text-sm">{selectedIssue.reporter}</p>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-gray-600 mb-1">Reported At</p>
+                <p className="text-sm">{selectedIssue.createdAt}</p>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button onClick={() => setSelectedIssue(null)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
