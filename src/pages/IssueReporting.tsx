@@ -96,70 +96,35 @@ const IssueReporting = () => {
     setIsSubmitting(true);
 
     try {
-      // Create issue object with admin routing
-      const issueData = {
-        ...formData,
-        id: Math.random().toString(36).substr(2, 9),
-        reporterId: user?.id || 'anonymous',
-        reporterName: user?.name || 'Anonymous User',
-        assignedTo: 'admin', // Always route to admin
-        assignedToName: 'Administrator',
-        status: 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        comments: []
-      };
+      // Import the issueAPI
+      const { issueAPI } = await import('@/services/api');
 
-      // Simulate API call to save issue
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Store issue in localStorage for demo purposes (in real app, this would be an API call)
-      try {
-        const storedIssues = localStorage.getItem('dims-issues');
-        const existingIssues = storedIssues ? JSON.parse(storedIssues) : [];
-        
-        // Validate that existingIssues is an array
-        if (!Array.isArray(existingIssues)) {
-          console.error('Invalid issues data in localStorage, initializing with empty array');
-          const newIssues = [issueData];
-          localStorage.setItem('dims-issues', JSON.stringify(newIssues));
-        } else {
-          existingIssues.unshift(issueData);
-          localStorage.setItem('dims-issues', JSON.stringify(existingIssues));
-        }
-      } catch (error) {
-        console.error('Error saving issue to localStorage:', error);
-        // Fallback: create new array with the issue
-        localStorage.setItem('dims-issues', JSON.stringify([issueData]));
+      // Create issue via API
+      const response: any = await issueAPI.create({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+        location: {
+          locationType: formData.location.type,
+          id: formData.location.id,
+          name: formData.location.name,
+          building: formData.location.building,
+          floor: formData.location.floor,
+        },
+        urgency: formData.urgency || undefined,
+        estimatedImpact: formData.estimatedImpact || undefined,
+        attachments: formData.attachments.map(f => f.name),
+        images: formData.images.map(f => f.name),
+        notifyAdmin: formData.notifyAdmin,
+        allowPublicView: formData.allowPublicView,
+      });
+
+      // Check if the response indicates success
+      if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to create issue');
       }
-      
-      // Create notification for admin
-      const adminNotification = {
-        id: Math.random().toString(36).substr(2, 9),
-        userId: 'admin',
-        title: 'New Issue Reported',
-        message: `New issue "${formData.title}" reported by ${issueData.reporterName}`,
-        type: 'info',
-        read: false,
-        createdAt: new Date(),
-        actionUrl: '/admin/issues'
-      };
-      
-      try {
-        const storedNotifications = localStorage.getItem('dims-notifications');
-        const existingNotifications = storedNotifications ? JSON.parse(storedNotifications) : [];
-        
-        if (Array.isArray(existingNotifications)) {
-          existingNotifications.unshift(adminNotification);
-          localStorage.setItem('dims-notifications', JSON.stringify(existingNotifications));
-        } else {
-          localStorage.setItem('dims-notifications', JSON.stringify([adminNotification]));
-        }
-      } catch (error) {
-        console.error('Error saving notification to localStorage:', error);
-        localStorage.setItem('dims-notifications', JSON.stringify([adminNotification]));
-      }
-      
+
       // Reset form
       setFormData({
         title: '',
@@ -177,7 +142,7 @@ const IssueReporting = () => {
 
       // Show success message
       alert('Issue reported successfully! It has been routed to the administrator for review.');
-      
+
       navigate(getDefaultRouteForRole(user?.role));
     } catch (error) {
       console.error('Error submitting issue:', error);
@@ -314,8 +279,8 @@ const IssueReporting = () => {
             {formData.location.type && (
               <div className="space-y-2">
                 <Label htmlFor="location">Specific Location *</Label>
-                <Select 
-                  value={formData.location.id} 
+                <Select
+                  value={formData.location.id}
                   onValueChange={(value) => {
                     const selectedLocation = locations.find(loc => loc.id === value);
                     if (selectedLocation) {

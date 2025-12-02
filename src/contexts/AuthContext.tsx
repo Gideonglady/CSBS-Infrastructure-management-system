@@ -2,16 +2,20 @@ import React, { createContext, useContext, useReducer, useEffect, ReactNode } fr
 import { AuthContextType, AuthState, User, LoginCredentials, RegisterData, UserRole } from '@/types/auth';
 import { authAPI } from '@/services/api';
 
+// Helper to map user data
+const mapUser = (userData: any): User => ({
+  ...userData,
+  id: userData._id || userData.id,
+  createdAt: new Date(userData.createdAt),
+  updatedAt: new Date(userData.updatedAt),
+});
+
 // Authentication service using backend API
 const authService = {
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
     const data = await authAPI.login(credentials);
     return {
-      user: {
-        ...data.data.user,
-        createdAt: new Date(data.data.user.createdAt),
-        updatedAt: new Date(data.data.user.updatedAt),
-      },
+      user: mapUser(data.data.user),
       token: data.data.token,
     };
   },
@@ -19,11 +23,7 @@ const authService = {
   async register(data: RegisterData): Promise<{ user: User; token: string }> {
     const response = await authAPI.register(data);
     return {
-      user: {
-        ...response.data.user,
-        createdAt: new Date(response.data.user.createdAt),
-        updatedAt: new Date(response.data.user.updatedAt),
-      },
+      user: mapUser(response.data.user),
       token: response.data.token,
     };
   },
@@ -34,11 +34,7 @@ const authService = {
 
     try {
       const data = await authAPI.getCurrentUser();
-      return {
-        ...data.data.user,
-        createdAt: new Date(data.data.user.createdAt),
-        updatedAt: new Date(data.data.user.updatedAt),
-      };
+      return mapUser(data.data.user);
     } catch (error) {
       return null;
     }

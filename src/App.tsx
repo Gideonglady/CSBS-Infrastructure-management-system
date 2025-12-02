@@ -22,6 +22,7 @@ import IssueReporting from "./pages/IssueReporting";
 
 import Notifications from "./pages/Notifications";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminIssueManagement from "./pages/AdminIssueManagement";
 import MyIssues from "./pages/MyIssues";
 import MyIssuesTest from "./pages/MyIssues-test";
 import MyIssuesSimple from "./pages/MyIssues-simple";
@@ -90,127 +91,127 @@ const App = () => (
       <NotificationProvider>
         <AuditProvider>
           <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
-        >
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            {/* General Dashboard */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Digital Registers */}
-            <Route path="/registers" element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.FACULTY, UserRole.NON_TEACHING_STAFF, UserRole.LAB_TECHNICIAN]}>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Navigate to="/registers/classrooms" replace />} />
-              <Route path="classrooms" element={<Classrooms />} />
-              <Route path="labs" element={<Laboratories />} />
-            </Route>
-            
-            {/* Issue Management - Class Rep, Faculty, Lab Tech */}
-            <Route path="/issues" element={
-              <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
-                <Layout>
-                  <IssueManagementLanding />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/issues/report" element={
-              <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<IssueReporting />} />
-            </Route>
-            
-            <Route path="/my-issues" element={
-              <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
-                <Layout>
-                  <MyIssues />
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
+            <Toaster />
+            <Sonner />
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true
+              }}
+            >
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                {/* General Dashboard */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                    <Layout>
+                      <Dashboard />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
 
-            
-            {/* Notifications */}
-            <Route path="/notifications" element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Notifications />} />
-            </Route>
-            
-            {/* Audit Log - Removed */}
-            
-            {/* Admin Only Routes */}
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<AdminDashboard />} />
-              <Route path="approvals" element={<PendingApprovals />} />
-            </Route>
-            
-            {/* Equipment Transfer */}
-            <Route path="/equipment-transfer" element={
-              <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.LAB_TECHNICIAN, UserRole.NON_TEACHING_STAFF]}>
-                <Layout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<EquipmentTransfer />} />
-            </Route>
-            
-            {/* Faculty Routes */}
-            <Route path="/faculty/*" element={
-              <ProtectedRoute allowedRoles={[UserRole.FACULTY, UserRole.ADMIN]}>
-                <Layout>
-                  <Routes>
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="issues" element={<div>Faculty Issues</div>} />
-                  </Routes>
-                </Layout>
-              </ProtectedRoute>
-            } />
-            
-            {/* Error Routes */}
-            <Route path="/unauthorized" element={
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
-                  <p className="text-gray-600">You don't have permission to access this page.</p>
-                </div>
-              </div>
-            } />
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+                {/* Digital Registers */}
+                <Route path="/registers" element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.FACULTY, UserRole.NON_TEACHING_STAFF, UserRole.LAB_TECHNICIAN]}>
+                    <Layout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<Navigate to="/registers/classrooms" replace />} />
+                  <Route path="classrooms" element={<Classrooms />} />
+                  <Route path="labs" element={<Laboratories />} />
+                </Route>
+
+                {/* Issue Management - Class Rep, Faculty, Lab Tech */}
+                <Route path="/issues" element={
+                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
+                    <Layout>
+                      <IssueManagementLanding />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+
+                <Route path="/issues/report" element={
+                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
+                    <Layout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<IssueReporting />} />
+                </Route>
+
+                <Route path="/my-issues" element={
+                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
+                    <Layout>
+                      <MyIssues />
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+
+
+
+                {/* Notifications */}
+                <Route path="/notifications" element={
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<Notifications />} />
+                </Route>
+
+                {/* Audit Log - Removed */}
+
+                {/* Admin Only Routes */}
+                <Route path="/admin" element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                    <Layout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="approvals" element={<PendingApprovals />} />
+                </Route>
+
+                {/* Equipment Transfer */}
+                <Route path="/equipment-transfer" element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.LAB_TECHNICIAN, UserRole.NON_TEACHING_STAFF]}>
+                    <Layout />
+                  </ProtectedRoute>
+                }>
+                  <Route index element={<EquipmentTransfer />} />
+                </Route>
+
+                {/* Faculty Routes */}
+                <Route path="/faculty/*" element={
+                  <ProtectedRoute allowedRoles={[UserRole.FACULTY, UserRole.ADMIN]}>
+                    <Layout>
+                      <Routes>
+                        <Route path="dashboard" element={<Dashboard />} />
+                        <Route path="issues" element={<div>Faculty Issues</div>} />
+                      </Routes>
+                    </Layout>
+                  </ProtectedRoute>
+                } />
+
+                {/* Error Routes */}
+                <Route path="/unauthorized" element={
+                  <div className="min-h-screen flex items-center justify-center">
+                    <div className="text-center">
+                      <h1 className="text-2xl font-bold text-gray-900 mb-4">Access Denied</h1>
+                      <p className="text-gray-600">You don't have permission to access this page.</p>
+                    </div>
+                  </div>
+                } />
+
+                {/* Catch-all route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
           </TooltipProvider>
         </AuditProvider>
       </NotificationProvider>
     </AuthProvider>
-  </QueryClientProvider>
+  </QueryClientProvider >
 );
 
 export default App;

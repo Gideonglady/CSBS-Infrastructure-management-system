@@ -27,121 +27,29 @@ const AdminDashboard = () => {
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [latestNotification, setLatestNotification] = useState<any>(null);
-  
+
   const { notifications, unreadCount, markAsRead } = useNotifications('admin');
 
-  // Load issues from localStorage or use mock data
-  const loadIssues = () => {
+  // Load issues from MongoDB API
+  const loadIssues = async () => {
     try {
-      const stored = localStorage.getItem('dims-issues');
-      if (stored) {
-        const parsedIssues: Issue[] = JSON.parse(stored);
-        if (parsedIssues.length > 0) {
-          setIssues(parsedIssues);
-          setFilteredIssues(parsedIssues);
-          return;
-        }
+      // Import the issueAPI
+      const { issueAPI } = await import('@/services/api');
+
+      // Fetch all issues from API
+      const response: any = await issueAPI.getAll();
+
+      if (response && response.success !== false && response.data) {
+        setIssues(response.data);
+        setFilteredIssues(response.data);
+      } else {
+        setIssues([]);
+        setFilteredIssues([]);
       }
-      
-      // Mock data if storage is empty
-      const mockIssues: Issue[] = [
-        {
-          id: 'ISS-001',
-          title: 'Projector Malfunction in Lab 1',
-          description: 'The projector is flickering and turning off intermittently during lectures.',
-          status: IssueStatus.PENDING,
-          priority: IssuePriority.HIGH,
-          category: IssueCategory.EQUIPMENT,
-          location: { type: 'laboratory', name: 'Computer Lab 1', building: 'Main Block', floor: 1 },
-          reporterId: 'user1',
-          reporterName: 'Dr. Smith',
-          createdAt: new Date(Date.now() - 86400000 * 2),
-          updatedAt: new Date(),
-          comments: [],
-          attachments: []
-        },
-        {
-          id: 'ISS-002',
-          title: 'Leaking Faucet in Washroom',
-          description: 'Water is continuously dripping from the tap in the second floor washroom.',
-          status: IssueStatus.PENDING,
-          priority: IssuePriority.MEDIUM,
-          category: IssueCategory.INFRASTRUCTURE,
-          location: { type: 'other', name: 'Gents Washroom', building: 'Science Block', floor: 2 },
-          reporterId: 'user2',
-          reporterName: 'John Doe',
-          createdAt: new Date(Date.now() - 86400000),
-          updatedAt: new Date(),
-          comments: [],
-          attachments: []
-        },
-        {
-          id: 'ISS-003',
-          title: 'Network Switch Failure',
-          description: 'Internet connectivity is down in the faculty wing due to a switch failure.',
-          status: IssueStatus.IN_PROGRESS,
-          priority: IssuePriority.CRITICAL,
-          category: IssueCategory.EQUIPMENT,
-          location: { type: 'other', name: 'Faculty Wing', building: 'Admin Block', floor: 1 },
-          reporterId: 'user3',
-          reporterName: 'Admin User',
-          createdAt: new Date(Date.now() - 3600000 * 5),
-          updatedAt: new Date(),
-          comments: [],
-          attachments: []
-        },
-        {
-          id: 'ISS-004',
-          title: 'Broken Chair in Class 3B',
-          description: 'One of the student desks has a broken leg and needs replacement.',
-          status: IssueStatus.RESOLVED,
-          priority: IssuePriority.LOW,
-          category: IssueCategory.EQUIPMENT,
-          location: { type: 'classroom', name: 'Class 3B', building: 'Main Block', floor: 3 },
-          reporterId: 'user4',
-          reporterName: 'Sarah Jones',
-          createdAt: new Date(Date.now() - 86400000 * 5),
-          updatedAt: new Date(),
-          comments: [],
-          attachments: []
-        },
-        {
-          id: 'ISS-005',
-          title: 'AC Not Cooling',
-          description: 'Air conditioner in the server room is not maintaining the required temperature.',
-          status: IssueStatus.IN_PROGRESS,
-          priority: IssuePriority.HIGH,
-          category: IssueCategory.EQUIPMENT,
-          location: { type: 'other', name: 'Server Room', building: 'Admin Block', floor: 0 },
-          reporterId: 'user5',
-          reporterName: 'Mike Tech',
-          createdAt: new Date(Date.now() - 3600000 * 24),
-          updatedAt: new Date(),
-          comments: [],
-          attachments: []
-        },
-        {
-          id: 'ISS-006',
-          title: 'Whiteboard Replacement',
-          description: 'The whiteboard in Lab 2 is heavily stained and needs replacement.',
-          status: IssueStatus.RESOLVED,
-          priority: IssuePriority.LOW,
-          category: IssueCategory.INFRASTRUCTURE,
-          location: { type: 'laboratory', name: 'Physics Lab', building: 'Science Block', floor: 1 },
-          reporterId: 'user6',
-          reporterName: 'Prof. Wilson',
-          createdAt: new Date(Date.now() - 86400000 * 7),
-          updatedAt: new Date(),
-          comments: [],
-          attachments: []
-        }
-      ];
-      
-      setIssues(mockIssues);
-      setFilteredIssues(mockIssues);
-      
     } catch (error) {
-      console.error('Error loading issues:', error);
+      console.error('Error loading issues from API:', error);
+      setIssues([]);
+      setFilteredIssues([]);
     }
   };
 
@@ -154,15 +62,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     loadIssues();
     loadPendingApprovals();
-
-    // Listen for storage changes
-    const handleStorageChange = () => {
-      loadIssues();
-      loadPendingApprovals();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Show latest notification as popup
@@ -246,11 +145,11 @@ const AdminDashboard = () => {
             <h4 className="font-semibold text-sm line-clamp-2">{issue.title}</h4>
           </div>
         </div>
-        
+
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>{issue.location.name}</span>
         </div>
-        
+
         <div className="mt-2 pt-2 border-t flex justify-end">
           <span className="text-xs text-blue-600 hover:underline">View Details</span>
         </div>
@@ -449,7 +348,7 @@ const AdminDashboard = () => {
                   />
                 </div>
               </div>
-              
+
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Category" />
@@ -461,7 +360,7 @@ const AdminDashboard = () => {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Priority" />
@@ -473,7 +372,7 @@ const AdminDashboard = () => {
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={locationFilter} onValueChange={setLocationFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Location" />
@@ -561,7 +460,7 @@ const AdminDashboard = () => {
               <DialogTitle>{selectedIssue.title}</DialogTitle>
               <DialogDescription>Issue ID: {selectedIssue.id}</DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -585,12 +484,12 @@ const AdminDashboard = () => {
                   <p className="text-sm">{selectedIssue.reporterName}</p>
                 </div>
               </div>
-              
+
               <div>
                 <p className="text-sm font-semibold text-gray-600 mb-1">Description</p>
                 <p className="text-sm">{selectedIssue.description}</p>
               </div>
-              
+
               <div>
                 <p className="text-sm font-semibold text-gray-600 mb-1">Location</p>
                 <p className="text-sm">
@@ -598,7 +497,7 @@ const AdminDashboard = () => {
                   {selectedIssue.location.floor && `, Floor ${selectedIssue.location.floor}`}
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-semibold text-gray-600">Created</p>
@@ -610,7 +509,7 @@ const AdminDashboard = () => {
                 </div>
               </div>
             </div>
-            
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setSelectedIssue(null)}>
                 Close
@@ -636,7 +535,7 @@ const AdminDashboard = () => {
               Choose the type of report you want to generate
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <Button
               variant="outline"
@@ -646,7 +545,7 @@ const AdminDashboard = () => {
               <Download className="w-4 h-4 mr-2" />
               Generate Report for All Issues ({filteredIssues.length} issues)
             </Button>
-            
+
             {selectedIssue && (
               <Button
                 variant="outline"
@@ -658,7 +557,7 @@ const AdminDashboard = () => {
               </Button>
             )}
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowReportDialog(false)}>
               Cancel
