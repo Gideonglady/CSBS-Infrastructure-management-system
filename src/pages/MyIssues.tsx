@@ -8,10 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 
 const MyIssues: React.FC = () => {
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const [issues, setIssues] = useState<any[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -94,6 +96,55 @@ const MyIssues: React.FC = () => {
     resolved: issues.filter(i => i.status === 'resolved').length,
     closed: issues.filter(i => i.status === 'closed').length
   };
+
+  const formatStatusLabel = (status: string) =>
+    status
+      .split('_')
+      .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
+
+  // Watch for status changes and push notifications
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    const cacheKey = `dims-issue-status-cache-${user.id}`;
+
+    try {
+      const storedStatuses = localStorage.getItem(cacheKey);
+      const previousStatuses: Record<string, string> = storedStatuses ? JSON.parse(storedStatuses) : {};
+      const statusChanges: Array<{ issue: any; previous: string }> = [];
+
+      const nextStatuses = issues.reduce<Record<string, string>>((acc, issue) => {
+        acc[issue.id] = issue.status;
+        const previous = previousStatuses[issue.id];
+        if (previous && previous !== issue.status) {
+          statusChanges.push({ issue, previous });
+        }
+        return acc;
+      }, {});
+
+      localStorage.setItem(cacheKey, JSON.stringify(nextStatuses));
+
+      statusChanges.forEach(({ issue }) => {
+        addNotification({
+          userId: user.id,
+          title: 'Issue status updated',
+          message: `"${issue.title}" is now ${formatStatusLabel(issue.status)}.`,
+          type: issue.status === 'resolved' ? 'success' : 'info',
+          read: false,
+          actionUrl: '/my-issues',
+          metadata: {
+            issueId: issue.id,
+            newStatus: issue.status
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Error tracking issue status changes for notifications:', error);
+    }
+  }, [issues, user?.id, addNotification]);
 
   return (
     <div className="space-y-6">

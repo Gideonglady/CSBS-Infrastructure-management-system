@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { IssueCategory, IssuePriority } from '@/types';
+import { getDefaultRouteForRole } from '@/utils/roleRedirect';
 
 const IssueReporting = () => {
   const navigate = useNavigate();
@@ -140,9 +141,15 @@ const IssueReporting = () => {
       });
 
       // Show success message
+<<<<<<< HEAD
       alert('Issue reported successfully! It has been saved to the database and routed to the administrator.');
 
       navigate('/dashboard');
+=======
+      alert('Issue reported successfully! It has been routed to the administrator for review.');
+      
+      navigate(getDefaultRouteForRole(user?.role));
+>>>>>>> 532744ae2ec043408ccd21135c52d78afcaad23f
     } catch (error) {
       console.error('Error submitting issue:', error);
       alert('Error submitting issue. Please try again.');

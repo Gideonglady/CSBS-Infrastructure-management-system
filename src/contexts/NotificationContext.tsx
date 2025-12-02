@@ -190,6 +190,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       createdAt: new Date()
     };
     dispatch({ type: 'ADD_NOTIFICATION', payload: newNotification });
+
+    try {
+      const existing = localStorage.getItem('dims-notifications');
+      const parsed: Notification[] = existing ? JSON.parse(existing) : [];
+      localStorage.setItem('dims-notifications', JSON.stringify([newNotification, ...parsed]));
+    } catch (error) {
+      console.error('Error persisting notification to localStorage:', error);
+    }
   };
 
   const removeNotification = (id: string) => {

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, Loader2, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { getDefaultRouteForRole } from "@/utils/roleRedirect";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -17,8 +18,7 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-
-  const from = location.state?.from?.pathname || "/dashboard";
+  const from = location.state?.from?.pathname;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +26,10 @@ const Login = () => {
     setError("");
 
     try {
-      await login({ email, password });
-
-      // Redirect based on user role
-      if (email.includes('admin')) {
-        navigate('/admin', { replace: true });
-      } else {
-        navigate(from, { replace: true });
-      }
+      const loggedInUser = await login({ email, password });
+      const defaultRoute = getDefaultRouteForRole(loggedInUser.role);
+      const targetRoute = from && from !== '/login' ? from : defaultRoute;
+      navigate(targetRoute, { replace: true });
     } catch (error) {
       setError("Invalid credentials. Please try again.");
     } finally {
