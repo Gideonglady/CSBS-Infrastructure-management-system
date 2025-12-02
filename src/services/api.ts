@@ -60,4 +60,38 @@ export const authAPI = {
     },
 };
 
+// Issue API endpoints
+export const issueAPI = {
+    create: async (issueData: any) => {
+        const response = await api.post('/api/issues/create', issueData);
+        return response;
+    },
+
+    getAll: async (filters?: { status?: string; priority?: string; category?: string; reporterId?: string }) => {
+        const params = new URLSearchParams();
+        if (filters?.status) params.append('status', filters.status);
+        if (filters?.priority) params.append('priority', filters.priority);
+        if (filters?.category) params.append('category', filters.category);
+        if (filters?.reporterId) params.append('reporterId', filters.reporterId);
+
+        const response = await api.get(`/api/issues?${params.toString()}`);
+        return response;
+    },
+
+    getById: async (id: string) => {
+        const response = await api.get(`/api/issues/${id}`);
+        return response;
+    },
+
+    updateStatus: async (id: string, status: string, comment?: string) => {
+        const response = await api.patch(`/api/issues/${id}/status`, { status, comment });
+        return response;
+    },
+
+    addComment: async (id: string, content: string, isInternal?: boolean) => {
+        const response = await api.post(`/api/issues/${id}/comment`, { content, isInternal });
+        return response;
+    },
+};
+
 export default api;

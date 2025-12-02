@@ -18,45 +18,33 @@ const MyIssues: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
 
-  // Load user's issues from localStorage
+  // Load user's issues from MongoDB API
   useEffect(() => {
-    const loadUserIssues = () => {
+    const loadUserIssues = async () => {
       try {
-        const storedIssues = localStorage.getItem('dims-issues');
-        const allIssues = storedIssues ? JSON.parse(storedIssues) : [];
-        
-        // Validate that allIssues is an array
-        if (!Array.isArray(allIssues)) {
-          console.error('Invalid issues data in localStorage');
+        // Import the issueAPI
+        const { issueAPI } = await import('@/services/api');
+
+        // Fetch all issues from API
+        const response: any = await issueAPI.getAll({ reporterId: user?.id });
+
+        if (response && response.success !== false && response.data) {
+          setIssues(response.data);
+          setFilteredIssues(response.data);
+        } else {
           setIssues([]);
           setFilteredIssues([]);
-          return;
         }
-        
-        const userIssues = allIssues.filter(issue => 
-          issue && issue.reporterId === user?.id
-        );
-        setIssues(userIssues);
-        setFilteredIssues(userIssues);
       } catch (error) {
-        console.error('Error loading issues from localStorage:', error);
+        console.error('Error loading issues from API:', error);
         setIssues([]);
         setFilteredIssues([]);
       }
     };
-    
-    loadUserIssues();
-    
-    // Listen for storage changes
-    const handleStorageChange = () => {
+
+    if (user?.id) {
       loadUserIssues();
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    }
   }, [user?.id]);
 
   // Filter issues based on search and filters
@@ -220,7 +208,7 @@ const MyIssues: React.FC = () => {
               <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No issues found</h3>
               <p className="text-gray-500">
-                {issues.length === 0 
+                {issues.length === 0
                   ? "You haven't reported any issues yet. Click 'Report Issue' to get started."
                   : "No issues match your current filters."
                 }
@@ -320,19 +308,19 @@ const MyIssues: React.FC = () => {
                                   <p className="text-sm">{selectedIssue.assignedToName}</p>
                                 </div>
                               </div>
-                              
+
                               <div>
                                 <label className="text-sm font-medium text-gray-500">Description</label>
                                 <p className="text-sm bg-gray-100 p-3 rounded mt-1">
                                   {selectedIssue.description}
                                 </p>
                               </div>
-                              
+
                               <div>
                                 <label className="text-sm font-medium text-gray-500">Location</label>
                                 <p className="text-sm">{selectedIssue.location.name} - {selectedIssue.location.building}</p>
                               </div>
-                              
+
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
                                   <label className="text-sm font-medium text-gray-500">Created</label>

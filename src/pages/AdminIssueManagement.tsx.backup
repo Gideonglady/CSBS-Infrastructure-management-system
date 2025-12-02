@@ -19,44 +19,40 @@ const AdminIssueManagement: React.FC = () => {
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [updateComment, setUpdateComment] = useState('');
-  const [newStatus, setNewStatus] = useState('');
 
   // Load issues from localStorage on component mount
   useEffect(() => {
-    const loadIssues = async () => {
+    const loadIssues = () => {
       try {
-        const { issueAPI } = await import('@/services/api');
-        const response = await issueAPI.getAll();
-
-        // API returns { success, data: [...] }
-        if (response && response.data) {
-          const issuesData = response.data.data || response.data;
-          if (Array.isArray(issuesData)) {
-            setIssues(issuesData);
-            setFilteredIssues(issuesData);
-          } else {
-            console.error('Invalid issues data format from API');
-            setIssues([]);
-            setFilteredIssues([]);
-          }
-        } else {
-          console.error('No data received from API');
+        const storedIssues = localStorage.getItem('dims-issues');
+        const savedIssues = storedIssues ? JSON.parse(storedIssues) : [];
+        
+        // Validate that savedIssues is an array
+        if (!Array.isArray(savedIssues)) {
+          console.error('Invalid issues data in localStorage');
           setIssues([]);
           setFilteredIssues([]);
+          return;
         }
+        
+        setIssues(savedIssues);
+        setFilteredIssues(savedIssues);
       } catch (error) {
-        console.error('Error loading issues from API:', error);
+        console.error('Error loading issues from localStorage:', error);
         setIssues([]);
         setFilteredIssues([]);
       }
     };
-
+    
     loadIssues();
-
-    // Poll for new issues every 10 seconds
-    const interval = setInterval(loadIssues, 10000);
-
-    return () => clearInterval(interval);
+    
+    // Listen for storage changes (when new issues are added)
+    const handleStorageChange = () => {
+      loadIssues();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Filter issues based on search and filters
@@ -107,28 +103,56 @@ const AdminIssueManagement: React.FC = () => {
 
   const updateIssueStatus = async (issueId: string, newStatus: string, comment: string = '') => {
     try {
-      const { issueAPI } = await import('@/services/api');
-
-      // Update status via API
-      const response = await issueAPI.updateStatus(issueId, newStatus, comment);
-
-      if (response && response.data) {
-        // Refresh the issues list to get the updated data
-        const issuesResponse = await issueAPI.getAll();
-        if (issuesResponse && issuesResponse.data) {
-          const issuesData = issuesResponse.data.data || issuesResponse.data;
-          if (Array.isArray(issuesData)) {
-            setIssues(issuesData);
-          }
+      const updatedIssues = issues.map(issue => {
+        if (issue.id === issueId) {
+          const updatedIssue = {
+            ...issue,
+            status: newStatus,
+            updatedAt: new Date(),
+            comments: [
+              ...issue.comments,
+              {
+                id: Math.random().toString(36).substr(2, 9),
+                userId: 'admin',
+                userName: 'Administrator',
+                content: comment || `Status changed to ${newStatus}`,
+                createdAt: new Date(),
+                isInternal: false
+              }
+            ]
+          };
+          return updatedIssue;
         }
+        return issue;
+      });
 
-        setIsUpdateDialogOpen(false);
-        setUpdateComment('');
-        setSelectedIssue(null);
+      setIssues(updatedIssues);
+      localStorage.setItem('dims-issues', JSON.stringify(updatedIssues));
+
+      // Create notification for the reporter
+      const issue = issues.find(i => i.id === issueId);
+      if (issue && issue.reporterId !== 'admin') {
+        const notification = {
+          id: Math.random().toString(36).substr(2, 9),
+          userId: issue.reporterId,
+          title: 'Issue Status Updated',
+          message: `Your issue "${issue.title}" status has been updated to ${newStatus}`,
+          type: 'info',
+          read: false,
+          createdAt: new Date(),
+          actionUrl: `/issues/${issueId}`
+        };
+        
+        const existingNotifications = JSON.parse(localStorage.getItem('dims-notifications') || '[]');
+        existingNotifications.unshift(notification);
+        localStorage.setItem('dims-notifications', JSON.stringify(existingNotifications));
       }
+
+      setIsUpdateDialogOpen(false);
+      setUpdateComment('');
+      setSelectedIssue(null);
     } catch (error) {
       console.error('Error updating issue:', error);
-      alert('Failed to update issue status. Please try again.');
     }
   };
 
@@ -266,7 +290,7 @@ const AdminIssueManagement: React.FC = () => {
               <AlertTriangle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No issues found</h3>
               <p className="text-gray-500">
-                {issues.length === 0
+                {issues.length === 0 
                   ? "No issues have been reported yet."
                   : "No issues match your current filters."
                 }
@@ -287,7 +311,7 @@ const AdminIssueManagement: React.FC = () => {
               </TableHeader>
               <TableBody>
                 {filteredIssues.map((issue) => (
-                  <TableRow key={issue._id}>
+                  <TableRow key={issue.id}>
                     <TableCell>
                       <div>
                         <div className="font-medium">{issue.title}</div>
@@ -327,14 +351,92 @@ const AdminIssueManagement: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedIssue(issue)}
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedIssue(issue)}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              View
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                              <DialogTitle>Issue Details</DialogTitle>
+                              <DialogDescription>
+                                Detailed information about this issue
+                              </DialogDescription>
+                            </DialogHeader>
+                            {selectedIssue && (
+                              <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-500">Title</label>
+                                    <p className="text-sm">{selectedIssue.title}</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-500">Status</label>
+                                    <p className="text-sm">
+                                      <Badge className={getStatusColor(selectedIssue.status)}>
+                                        {selectedIssue.status.replace('_', ' ')}
+                                      </Badge>
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-500">Priority</label>
+                                    <p className="text-sm">
+                                      <Badge className={getPriorityColor(selectedIssue.priority)}>
+                                        {selectedIssue.priority}
+                                      </Badge>
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-500">Reporter</label>
+                                    <p className="text-sm">{selectedIssue.reporterName}</p>
+                                  </div>
+                                </div>
+                                
+                                <div>
+                                  <label className="text-sm font-medium text-gray-500">Description</label>
+                                  <p className="text-sm bg-gray-100 p-3 rounded mt-1">
+                                    {selectedIssue.description}
+                                  </p>
+                                </div>
+                                
+                                <div>
+                                  <label className="text-sm font-medium text-gray-500">Location</label>
+                                  <p className="text-sm">{selectedIssue.location.name} - {selectedIssue.location.building}</p>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-500">Created</label>
+                                    <p className="text-sm">{new Date(selectedIssue.createdAt).toLocaleString()}</p>
+                                  </div>
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-500">Last Updated</label>
+                                    <p className="text-sm">{new Date(selectedIssue.updatedAt).toLocaleString()}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setIsUpdateDialogOpen(true);
+                                }}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Update Status
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -343,86 +445,6 @@ const AdminIssueManagement: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      {/* Issue Details Dialog */}
-      {selectedIssue && (
-        <Dialog open={!!selectedIssue} onOpenChange={() => setSelectedIssue(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Issue Details</DialogTitle>
-              <DialogDescription>
-                Detailed information about this issue
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Title</label>
-                  <p className="text-sm">{selectedIssue.title}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Status</label>
-                  <p className="text-sm">
-                    <Badge className={getStatusColor(selectedIssue.status)}>
-                      {selectedIssue.status.replace('_', ' ')}
-                    </Badge>
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Priority</label>
-                  <p className="text-sm">
-                    <Badge className={getPriorityColor(selectedIssue.priority)}>
-                      {selectedIssue.priority}
-                    </Badge>
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Reporter</label>
-                  <p className="text-sm">{selectedIssue.reporterName}</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-500">Description</label>
-                <p className="text-sm bg-gray-100 p-3 rounded mt-1">
-                  {selectedIssue.description}
-                </p>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-gray-500">Location</label>
-                <p className="text-sm">{selectedIssue.location.name} - {selectedIssue.location.building}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Created</label>
-                  <p className="text-sm">{new Date(selectedIssue.createdAt).toLocaleString()}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Last Updated</label>
-                  <p className="text-sm">{new Date(selectedIssue.updatedAt).toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setSelectedIssue(null)}>
-                Close
-              </Button>
-              <Button onClick={() => {
-                setNewStatus(selectedIssue.status);
-                setUpdateComment('');
-                setIsUpdateDialogOpen(true);
-              }}>
-                <Edit className="w-4 h-4 mr-2" />
-                Update Status
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
 
       {/* Update Status Dialog */}
       <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
@@ -436,7 +458,11 @@ const AdminIssueManagement: React.FC = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">New Status</label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
+              <Select onValueChange={(value) => {
+                if (selectedIssue) {
+                  updateIssueStatus(selectedIssue.id, value, updateComment);
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select new status" />
                 </SelectTrigger>
@@ -461,13 +487,6 @@ const AdminIssueManagement: React.FC = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsUpdateDialogOpen(false)}>
               Cancel
-            </Button>
-            <Button onClick={() => {
-              if (selectedIssue) {
-                updateIssueStatus(selectedIssue._id, newStatus, updateComment);
-              }
-            }}>
-              Update
             </Button>
           </DialogFooter>
         </DialogContent>
