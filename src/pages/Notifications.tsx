@@ -1,15 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { Bell, Check, CheckCheck, Trash2, ExternalLink } from 'lucide-react';
+import { Bell, Check, CheckCheck, Trash2, ExternalLink, Eye, Edit, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 
 const Notifications = () => {
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState('all');
+  const [selectedIssue, setSelectedIssue] = useState<any>(null);
+  const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
 
   const filteredNotifications = useMemo(() => {
     switch (activeTab) {
@@ -44,13 +47,51 @@ const Notifications = () => {
     }
   };
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = async (notification: any) => {
     if (!notification.read) {
       markAsRead(notification.id);
     }
-    if (notification.actionUrl) {
-      // Navigate to the action URL
+
+    // If notification has issueId in metadata, fetch and show issue details
+    if (notification.metadata?.issueId) {
+      try {
+        const { issueAPI } = await import('@/services/api');
+        const response = await issueAPI.getById(notification.metadata.issueId);
+
+        if (response && response.data) {
+          setSelectedIssue(response.data);
+          setIsIssueDialogOpen(true);
+        }
+      } catch (error) {
+        console.error('Error fetching issue details:', error);
+        // Fallback to navigation if fetch fails
+        if (notification.actionUrl) {
+          window.location.href = notification.actionUrl;
+        }
+      }
+    } else if (notification.actionUrl) {
+      // Navigate to the action URL if no issue ID
       window.location.href = notification.actionUrl;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return 'bg-orange-100 text-orange-800';
+      case 'in_progress': return 'bg-blue-100 text-blue-800';
+      case 'resolved': return 'bg-green-100 text-green-800';
+      case 'closed': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'low': return 'bg-green-100 text-green-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'critical': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -98,9 +139,8 @@ const Notifications = () => {
               filteredNotifications.map((notification) => (
                 <Card
                   key={notification.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type)} ${
-                    notification.read ? 'opacity-75' : 'border-l-4 border-l-primary'
-                  }`}
+                  className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type)} ${notification.read ? 'opacity-75' : 'border-l-4 border-l-primary'
+                    }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <CardContent className="p-6">
@@ -180,9 +220,8 @@ const Notifications = () => {
               filteredNotifications.map((notification) => (
                 <Card
                   key={notification.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type)} ${
-                    notification.read ? 'opacity-75' : 'border-l-4 border-l-primary'
-                  }`}
+                  className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type)} ${notification.read ? 'opacity-75' : 'border-l-4 border-l-primary'
+                    }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <CardContent className="p-6">
@@ -262,9 +301,8 @@ const Notifications = () => {
               filteredNotifications.map((notification) => (
                 <Card
                   key={notification.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type)} ${
-                    notification.read ? 'opacity-75' : 'border-l-4 border-l-primary'
-                  }`}
+                  className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type)} ${notification.read ? 'opacity-75' : 'border-l-4 border-l-primary'
+                    }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <CardContent className="p-6">
@@ -344,9 +382,8 @@ const Notifications = () => {
               filteredNotifications.map((notification) => (
                 <Card
                   key={notification.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type)} ${
-                    notification.read ? 'opacity-75' : 'border-l-4 border-l-primary'
-                  }`}
+                  className={`cursor-pointer transition-all hover:shadow-md ${getNotificationColor(notification.type)} ${notification.read ? 'opacity-75' : 'border-l-4 border-l-primary'
+                    }`}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <CardContent className="p-6">
@@ -450,6 +487,88 @@ const Notifications = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Issue Details Dialog */}
+      {selectedIssue && (
+        <Dialog open={isIssueDialogOpen} onOpenChange={setIsIssueDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Issue Details</DialogTitle>
+              <DialogDescription>
+                Detailed information about this issue
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Title</label>
+                  <p className="text-sm">{selectedIssue.title}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <p className="text-sm">
+                    <Badge className={getStatusColor(selectedIssue.status)}>
+                      {selectedIssue.status.replace('_', ' ')}
+                    </Badge>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Priority</label>
+                  <p className="text-sm">
+                    <Badge className={getPriorityColor(selectedIssue.priority)}>
+                      {selectedIssue.priority}
+                    </Badge>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Reporter</label>
+                  <p className="text-sm">{selectedIssue.reporterName}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">Description</label>
+                <p className="text-sm bg-gray-100 p-3 rounded mt-1">
+                  {selectedIssue.description}
+                </p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">Location</label>
+                <p className="text-sm">{selectedIssue.location?.name} - {selectedIssue.location?.building}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Created</label>
+                  <p className="text-sm">{new Date(selectedIssue.createdAt).toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Last Updated</label>
+                  <p className="text-sm">{new Date(selectedIssue.updatedAt).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsIssueDialogOpen(false);
+                setSelectedIssue(null);
+              }}>
+                Close
+              </Button>
+              <Button onClick={() => {
+                // Navigate to full issue management page
+                window.location.href = `/admin/issues?issueId=${selectedIssue._id}`;
+              }}>
+                <Edit className="w-4 h-4 mr-2" />
+                Manage Issue
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

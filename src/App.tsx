@@ -169,6 +169,7 @@ const App = () => (
                   </ProtectedRoute>
                 }>
                   <Route index element={<AdminDashboard />} />
+                  <Route path="issues" element={<AdminIssueManagement />} />
                   <Route path="approvals" element={<PendingApprovals />} />
                 </Route>
 
