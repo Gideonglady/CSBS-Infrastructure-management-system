@@ -1,0 +1,53 @@
+[
+  {
+    "THIAGARAJAR COLLEGE OF ENGINEERING": "COMPUTER SCIENCE AND BUSINESS SYSTEMS"
+  },
+  {
+    "THIAGARAJAR COLLEGE OF ENGINEERING": "Computer Details of the Department"
+  },
+  {
+    "THIAGARAJAR COLLEGE OF ENGINEERING": "S. No.",
+    "__EMPTY": "Name of the Lab/Venue",
+    "__EMPTY_1": "Number of systems",
+    "__EMPTY_2": "Configuration of the system",
+    "__EMPTY_3": "Softwares available",
+    "__EMPTY_4": "Additional equipments"
+  },
+  {
+    "THIAGARAJAR COLLEGE OF ENGINEERING": 1,
+    "__EMPTY": "Smart and Secure Environment Lab",
+    "__EMPTY_1": 31,
+    "__EMPTY_2": "31 Systems \n ( i7 with 8GB RAM,1TB HDD-7 No's, i5 with 16GB RAM, 1TB HDD-4, Core2Duo with, 4GB RAM, 500GB HDD-20No's)",
+    "__EMPTY_3": "Dev C++, Turbo C++, Visual Studio, Oracle, Java, MATLAB",
+    "__EMPTY_4": "1 Projector, 1 Printer"
+  },
+  {
+    "THIAGARAJAR COLLEGE OF ENGINEERING": 2,
+    "__EMPTY": "Agile Software Engineering Lab",
+    "__EMPTY_1": 42,
+    "__EMPTY_2": "42 System\n (i5 with 16GB RAM, 1TB HDD - 42 No's)",
+    "__EMPTY_3": "Dev C++, Turbo C++, Visual Studio, Oracle, Java, MatLab, Python, Emulator8086, R studio"
+  },
+  {
+    "THIAGARAJAR COLLEGE OF ENGINEERING": 3,
+    "__EMPTY": "Integrated Business Application Lab",
+    "__EMPTY_1": 35,
+    "__EMPTY_2": "35 System \n (i5 with,16GB RAM, 500GB HDD -30 No's,\n Dual core with 2GB RAM, 160 GB HDD- 5 No's )",
+    "__EMPTY_3": "Dev C++, Turbo C++, Visual Studio, Oracle, Java"
+  },
+  {
+    "THIAGARAJAR COLLEGE OF ENGINEERING": 4,
+    "__EMPTY": "Block Chain Lab",
+    "__EMPTY_1": 40,
+    "__EMPTY_2": "40 System\n (i5 with 16 GB RAM, 1TB, HDD-40 No's)",
+    "__EMPTY_3": "Dev C++, Turbo C++, Visual Studio, Oracle, Java, MatLab, Python, Emulator8086, R studio, Gophish, MATLAB"
+  },
+  {
+    "THIAGARAJAR COLLEGE OF ENGINEERING": 5,
+    "__EMPTY": "CSBS Dept office",
+    "__EMPTY_1": 13,
+    "__EMPTY_2": "13 Systems\n (i5 with 16GB RAM, 1TB HD - 7,\n i7 with 8GB RAM, 1TB HD -2,\n Core 2 Duo with 4 GM RAM, 500GB HD -4)",
+    "__EMPTY_3": "--",
+    "__EMPTY_4": "1 Movable projector, 3 Printer (HOD,Office,Staffroom)"
+  }
+]

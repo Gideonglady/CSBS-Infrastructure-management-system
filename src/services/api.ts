@@ -94,4 +94,42 @@ export const issueAPI = {
     },
 };
 
+// Laboratory API endpoints
+export const laboratoryAPI = {
+    getAll: async (filters?: { type?: string; department?: string; search?: string }) => {
+        const params = new URLSearchParams();
+        if (filters?.type) params.append('type', filters.type);
+        if (filters?.department) params.append('department', filters.department);
+        if (filters?.search) params.append('search', filters.search);
+
+        const response = await api.get(`/api/laboratories?${params.toString()}`);
+        return response;
+    },
+
+    getById: async (id: string) => {
+        const response = await api.get(`/api/laboratories/${id}`);
+        return response;
+    },
+
+    getStats: async () => {
+        const response = await api.get('/api/laboratories/stats');
+        return response;
+    },
+
+    create: async (data: any) => {
+        const response = await api.post('/api/laboratories', data);
+        return response;
+    },
+
+    update: async (id: string, data: any) => {
+        const response = await api.put(`/api/laboratories/${id}`, data);
+        return response;
+    },
+
+    delete: async (id: string) => {
+        const response = await api.delete(`/api/laboratories/${id}`);
+        return response;
+    },
+};
+
 export default api;
