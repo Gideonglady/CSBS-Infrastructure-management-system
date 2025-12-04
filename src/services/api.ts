@@ -88,6 +88,7 @@ export const issueAPI = {
         return response;
     },
 
+
     addComment: async (id: string, content: string, isInternal?: boolean) => {
         const response = await api.post(`/api/issues/${id}/comment`, { content, isInternal });
         return response;
@@ -132,4 +133,23 @@ export const laboratoryAPI = {
     },
 };
 
+// Notification API endpoints
+export const notificationAPI = {
+    getAll: async () => {
+        const response = await api.get('/api/notifications');
+        return response;
+    },
+
+    markAsRead: async (id: string) => {
+        const response = await api.patch(`/api/notifications/${id}/read`);
+        return response;
+    },
+
+    markAllAsRead: async () => {
+        const response = await api.patch('/api/notifications/read-all');
+        return response;
+    },
+};
+
 export default api;
+

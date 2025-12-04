@@ -1,5 +1,7 @@
 import express from 'express';
 import Issue from '../models/Issue.js';
+import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -50,6 +52,38 @@ router.post('/create', protect, async (req, res) => {
             assignedToName: 'Administrator',
             status: 'pending',
         });
+
+        // Create notifications for all admin users
+        if (notifyAdmin !== false) {
+            try {
+                // Find all admin users
+                const adminUsers = await User.find({ role: 'admin', isActive: true });
+
+                // Create notification for each admin
+                const notificationPromises = adminUsers.map(admin =>
+                    Notification.create({
+                        userId: admin._id,
+                        title: 'New Issue Reported',
+                        message: `${req.user.name} reported: ${title}`,
+                        type: 'info',
+                        actionUrl: `/admin/issues?issueId=${issue._id.toString()}`,
+                        metadata: {
+                            issueId: issue._id.toString(),
+                            reporterId: req.user._id.toString(),
+                            reporterName: req.user.name,
+                            category,
+                            priority,
+                        },
+                    })
+                );
+
+                await Promise.all(notificationPromises);
+                console.log(`Created notifications for ${adminUsers.length} admin(s)`);
+            } catch (notificationError) {
+                console.error('Error creating admin notifications:', notificationError);
+                // Don't fail the issue creation if notification fails
+            }
+        }
 
         res.status(201).json({
             success: true,

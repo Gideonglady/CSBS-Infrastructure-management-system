@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDistanceToNow } from 'date-fns';
+import { useSearchParams } from 'react-router-dom';
 
 const AdminIssueManagement: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [issues, setIssues] = useState<any[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,6 +60,20 @@ const AdminIssueManagement: React.FC = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Check for issueId in URL parameters and auto-open dialog
+  useEffect(() => {
+    const issueId = searchParams.get('issueId');
+    if (issueId && issues.length > 0) {
+      const issue = issues.find(i => i._id === issueId);
+      if (issue) {
+        setSelectedIssue(issue);
+        // Remove the issueId parameter from URL after opening
+        searchParams.delete('issueId');
+        setSearchParams(searchParams);
+      }
+    }
+  }, [issues, searchParams, setSearchParams]);
 
   // Filter issues based on search and filters
   useEffect(() => {

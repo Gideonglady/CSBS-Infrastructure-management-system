@@ -35,17 +35,50 @@ const ReportIssue = () => {
     setFiles(files.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Issue reported successfully!", {
-        description: "You will receive updates via email and notifications",
+    try {
+      // Import the issueAPI
+      const { issueAPI } = await import('@/services/api');
+
+      // Parse location to get details
+      const locationParts = formData.location.split('-');
+      const locationType = locationParts[0] === 'room' ? 'classroom' : locationParts[0] === 'lab' ? 'laboratory' : 'other';
+      const locationId = formData.location;
+      const locationName = formData.location; // You might want to map this to actual names
+
+      // Create issue via API
+      const response: any = await issueAPI.create({
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        priority: formData.priority,
+        location: {
+          locationType,
+          id: locationId,
+          name: locationName,
+          building: 'Main Building', // Default value
+          floor: '1', // Default value
+        },
+        urgency: undefined,
+        estimatedImpact: undefined,
+        attachments: [],
+        images: [],
+        notifyAdmin: true,
+        allowPublicView: false,
       });
-      
+
+      // Check if the response indicates success
+      if (!response || response.success === false) {
+        throw new Error(response?.message || 'Failed to create issue');
+      }
+
+      toast.success("Issue reported successfully!", {
+        description: "Administrators have been notified and will review your issue shortly",
+      });
+
       // Reset form
       setFormData({
         title: "",
@@ -56,7 +89,14 @@ const ReportIssue = () => {
         suggestedSolution: "",
       });
       setFiles([]);
-    }, 1500);
+    } catch (error) {
+      console.error('Error submitting issue:', error);
+      toast.error("Failed to submit issue", {
+        description: "Please try again or contact support if the problem persists",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

@@ -3,8 +3,11 @@ import mongoose from 'mongoose';
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      // Remove deprecated options - they're no longer needed in Mongoose 6+
+      // Add SSL/TLS configuration to prevent handshake errors
+      tls: true,
+      tlsAllowInvalidCertificates: false,
+      serverSelectionTimeoutMS: 5000,
     });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
@@ -16,3 +19,4 @@ const connectDB = async () => {
 };
 
 export default connectDB;
+

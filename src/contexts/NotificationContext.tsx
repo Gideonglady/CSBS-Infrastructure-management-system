@@ -79,82 +79,90 @@ interface NotificationProviderProps {
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(notificationReducer, initialState);
 
-  // Load notifications from localStorage and set up real-time updates
+  // Load notifications from backend and set up polling
   useEffect(() => {
-    const loadNotifications = () => {
+    const loadNotifications = async () => {
       try {
-        const storedNotifications = localStorage.getItem('dims-notifications');
-        const savedNotifications = storedNotifications ? JSON.parse(storedNotifications) : [];
-        
-        // Validate that savedNotifications is an array
-        if (!Array.isArray(savedNotifications)) {
-          console.error('Invalid notifications data in localStorage');
-          dispatch({ type: 'SET_NOTIFICATIONS', payload: [] });
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        if (!token) {
+          // If not logged in, load from localStorage as fallback
+          const storedNotifications = localStorage.getItem('dims-notifications');
+          const savedNotifications = storedNotifications ? JSON.parse(storedNotifications) : [];
+
+          if (Array.isArray(savedNotifications)) {
+            dispatch({ type: 'SET_NOTIFICATIONS', payload: savedNotifications });
+          }
           return;
         }
-        
-        // If no saved notifications, create some mock ones
-        if (savedNotifications.length === 0) {
-          const mockNotifications: Notification[] = [
-            {
-              id: '1',
-              userId: 'admin',
-              title: 'New Issue Reported',
-              message: 'Lab equipment malfunction reported in Chemistry Lab A',
-              type: 'info',
-              read: false,
-              createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-              actionUrl: '/admin/issues'
-            },
-            {
-              id: '2',
-              userId: 'admin',
-              title: 'Issue Resolved',
-              message: 'Projector issue in Room 205 has been resolved',
-              type: 'success',
-              read: false,
-              createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-              actionUrl: '/admin/issues'
-            },
-            {
-              id: '3',
-              userId: 'admin',
-              title: 'Maintenance Scheduled',
-              message: 'Scheduled maintenance for Computer Lab 1 tomorrow at 9 AM',
-              type: 'warning',
-              read: true,
-              createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-              actionUrl: '/registers/labs'
-            }
-          ];
-          localStorage.setItem('dims-notifications', JSON.stringify(mockNotifications));
-          dispatch({ type: 'SET_NOTIFICATIONS', payload: mockNotifications });
-        } else {
-          dispatch({ type: 'SET_NOTIFICATIONS', payload: savedNotifications });
+
+        // Fetch notifications from backend
+        const { notificationAPI } = await import('@/services/api');
+        const response: any = await notificationAPI.getAll();
+
+        if (response && response.success && Array.isArray(response.data)) {
+          // Map backend notifications to frontend format (convert _id to id)
+          const mappedNotifications = response.data.map((notif: any) => ({
+            ...notif,
+            id: notif._id || notif.id, // Use _id from MongoDB or id if already mapped
+            createdAt: new Date(notif.createdAt), // Ensure createdAt is a Date object
+          }));
+
+          dispatch({ type: 'SET_NOTIFICATIONS', payload: mappedNotifications });
+          // Also save to localStorage as backup
+          localStorage.setItem('dims-notifications', JSON.stringify(mappedNotifications));
         }
       } catch (error) {
-        console.error('Error loading notifications from localStorage:', error);
-        dispatch({ type: 'SET_NOTIFICATIONS', payload: [] });
+        console.error('Error loading notifications from backend:', error);
+
+        // Fallback to localStorage
+        try {
+          const storedNotifications = localStorage.getItem('dims-notifications');
+          const savedNotifications = storedNotifications ? JSON.parse(storedNotifications) : [];
+
+          if (Array.isArray(savedNotifications)) {
+            dispatch({ type: 'SET_NOTIFICATIONS', payload: savedNotifications });
+          }
+        } catch (localStorageError) {
+          console.error('Error loading notifications from localStorage:', localStorageError);
+          dispatch({ type: 'SET_NOTIFICATIONS', payload: [] });
+        }
       }
     };
-    
+
     loadNotifications();
-    
-    // Listen for storage changes (when new notifications are added)
-    const handleStorageChange = () => {
+
+    // Set up polling every 30 seconds
+    const pollInterval = setInterval(() => {
       loadNotifications();
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    
+    }, 30000);
+
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(pollInterval);
     };
   }, []);
 
-  const markAsRead = (id: string) => {
+  const markAsRead = async (id: string) => {
+    // Validate that ID exists
+    if (!id || id === 'undefined') {
+      console.error('Invalid notification ID:', id);
+      return;
+    }
+
+    try {
+      // Call backend API
+      const token = localStorage.getItem('token');
+      if (token) {
+        const { notificationAPI } = await import('@/services/api');
+        await notificationAPI.markAsRead(id);
+      }
+    } catch (error) {
+      console.error('Error marking notification as read on backend:', error);
+    }
+
+    // Update local state
     dispatch({ type: 'MARK_AS_READ', payload: id });
-    
+
     // Persist the change to localStorage
     try {
       const updatedNotifications = state.notifications.map(notification =>
@@ -168,9 +176,21 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    try {
+      // Call backend API
+      const token = localStorage.getItem('token');
+      if (token) {
+        const { notificationAPI } = await import('@/services/api');
+        await notificationAPI.markAllAsRead();
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read on backend:', error);
+    }
+
+    // Update local state
     dispatch({ type: 'MARK_ALL_AS_READ' });
-    
+
     // Persist the change to localStorage
     try {
       const updatedNotifications = state.notifications.map(notification => ({

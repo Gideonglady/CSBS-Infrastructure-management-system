@@ -36,12 +36,12 @@ const Sidebar: React.FC = () => {
     try {
       logout();
       console.log('Logout function called successfully');
-      
+
       // Use window.location for more reliable navigation
       setTimeout(() => {
         window.location.href = '/login';
       }, 100);
-      
+
       console.log('Navigation to login called');
     } catch (error) {
       console.error('Error during logout:', error);
@@ -72,7 +72,7 @@ const Sidebar: React.FC = () => {
     // Issue Management - Class Rep, Faculty, Lab Tech see reporting, Admin sees dashboard
     {
       label: 'Issue Management',
-      href: user?.role === 'admin' ? '/admin' : '/issues',
+      href: user?.role === 'admin' ? '/admin/issues' : '/issues',
       icon: AlertTriangle,
       roles: ['admin', 'class_rep', 'faculty', 'lab_technician'],
       children: user?.role === 'admin' ? [] : [
@@ -89,7 +89,7 @@ const Sidebar: React.FC = () => {
     }
   ];
 
-  const filteredItems = navigationItems.filter(item => 
+  const filteredItems = navigationItems.filter(item =>
     item.roles.includes(user?.role || '')
   );
 
@@ -147,7 +147,7 @@ const Sidebar: React.FC = () => {
         {filteredItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
-          
+
           return (
             <div key={item.label}>
               <Link
@@ -162,14 +162,14 @@ const Sidebar: React.FC = () => {
                 <Icon className={cn("w-5 h-5", isCollapsed && "mx-auto")} />
                 {!isCollapsed && <span>{item.label}</span>}
               </Link>
-              
+
               {/* Sub-items */}
               {!isCollapsed && item.children && active && (
                 <div className="ml-6 mt-2 space-y-1">
                   {item.children.map((child) => {
                     const ChildIcon = child.icon;
                     const childActive = isActive(child.href);
-                    
+
                     return (
                       <Link
                         key={child.href}
