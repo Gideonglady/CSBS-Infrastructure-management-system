@@ -40,11 +40,12 @@ const queryClient = new QueryClient();
 const IssueManagementLanding = () => {
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
+  const { user } = useAuth();
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold mb-2">Issue Management</h1>
+        <h1 className="text-2xl font-bold mb-2">Welcome, {user?.name || 'User'}</h1>
         <p className="text-gray-600">Start from your issue list, then jump to reporting or notifications as needed.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

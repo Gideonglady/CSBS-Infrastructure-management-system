@@ -10,10 +10,12 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import NotificationPopup from '@/components/NotificationPopup';
 import useNotifications from '@/hooks/useNotifications';
+import { useAuth } from '@/contexts/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
   const [latestNotification, setLatestNotification] = useState<any>(null);
@@ -98,7 +100,7 @@ const AdminDashboard = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+              <h1 className="text-2xl font-bold">Welcome, {user?.name || 'Admin'}</h1>
               <p className="text-sm text-muted-foreground">Manage all infrastructure issues</p>
             </div>
           </div>

@@ -80,7 +80,12 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Welcome, {user?.name || 'User'}</h1>
+          <p className="text-muted-foreground">Here's what's happening today.</p>
+        </div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
