@@ -53,20 +53,14 @@ export enum IssueStatus {
   REJECTED = 'rejected'
 }
 
-export enum IssuePriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical'
-}
+
 
 export enum IssueCategory {
   EQUIPMENT = 'equipment',
-  INFRASTRUCTURE = 'infrastructure',
+  FURNITURE = 'furniture',
   SAFETY = 'safety',
   CLEANLINESS = 'cleanliness',
-  SECURITY = 'security',
-  OTHER = 'other'
+  ELECTRICAL_AND_ELECTRONICS = 'electrical_and_electronics'
 }
 
 export interface Issue {
@@ -74,7 +68,7 @@ export interface Issue {
   title: string;
   description: string;
   category: IssueCategory;
-  priority: IssuePriority;
+  // Priority removed as per requirements
   status: IssueStatus;
   reporterId: string;
   reporterName: string;
@@ -115,7 +109,6 @@ export interface DashboardStats {
   resolvedIssues: number;
   averageResolutionTime: number;
   issuesByCategory: Record<IssueCategory, number>;
-  issuesByPriority: Record<IssuePriority, number>;
   issuesByStatus: Record<IssueStatus, number>;
   topReporters: Array<{ name: string; count: number }>;
   topResolvers: Array<{ name: string; count: number }>;
@@ -127,7 +120,6 @@ export interface ReportFilters {
     end: Date;
   };
   categories?: IssueCategory[];
-  priorities?: IssuePriority[];
   statuses?: IssueStatus[];
   reporters?: string[];
   assignedTo?: string[];

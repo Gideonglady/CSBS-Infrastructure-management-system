@@ -15,7 +15,6 @@ router.post('/create', protect, async (req, res) => {
             title,
             description,
             category,
-            priority,
             location,
             urgency,
             estimatedImpact,
@@ -25,8 +24,10 @@ router.post('/create', protect, async (req, res) => {
             allowPublicView,
         } = req.body;
 
+        console.log('Received Create Issue Body:', JSON.stringify(req.body, null, 2));
+
         // Validate required fields
-        if (!title || !description || !category || !priority || !location) {
+        if (!title || !description || !category || !location) {
             return res.status(400).json({
                 success: false,
                 message: 'Please provide all required fields',
@@ -38,7 +39,6 @@ router.post('/create', protect, async (req, res) => {
             title,
             description,
             category,
-            priority,
             location,
             urgency,
             estimatedImpact,
@@ -72,7 +72,6 @@ router.post('/create', protect, async (req, res) => {
                             reporterId: req.user._id.toString(),
                             reporterName: req.user.name,
                             category,
-                            priority,
                         },
                     })
                 );
@@ -105,12 +104,11 @@ router.post('/create', protect, async (req, res) => {
 // @access  Protected
 router.get('/', protect, async (req, res) => {
     try {
-        const { status, priority, category, reporterId } = req.query;
+        const { status, category, reporterId } = req.query;
 
         // Build filter object
         const filter = {};
         if (status) filter.status = status;
-        if (priority) filter.priority = priority;
         if (category) filter.category = category;
         if (reporterId) filter.reporterId = reporterId;
 
@@ -229,6 +227,21 @@ router.patch('/:id/status', protect, async (req, res) => {
         }
 
         await issue.save();
+
+        // Notify reporter if issue is resolved
+        if (status === 'resolved') {
+            await Notification.create({
+                userId: issue.reporterId,
+                title: 'Issue Resolved',
+                message: `Good news! Your issue "${issue.title}" has been resolved.`,
+                type: 'success',
+                read: false,
+                metadata: {
+                    issueId: issue._id,
+                    category: issue.category
+                }
+            });
+        }
 
         res.json({
             success: true,

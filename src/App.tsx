@@ -10,8 +10,9 @@ import { NotificationProvider } from "@/contexts/NotificationContext";
 import { AuditProvider } from "@/contexts/AuditContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "@/components/Layout/Layout";
-import Index from "./pages/Index";
+// import Index from "./pages/Index"; // Removed - Login is now the default page
 import Login from "./pages/Login";
+import ChangePassword from "./pages/ChangePassword";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import DashboardSimple from "./pages/Dashboard-simple";
@@ -23,6 +24,7 @@ import IssueReporting from "./pages/IssueReporting";
 import Notifications from "./pages/Notifications";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminIssueManagement from "./pages/AdminIssueManagement";
+import UserManagement from "./pages/UserManagement";
 import MyIssues from "./pages/MyIssues";
 import MyIssuesTest from "./pages/MyIssues-test";
 import MyIssuesSimple from "./pages/MyIssues-simple";
@@ -46,27 +48,36 @@ const IssueManagementLanding = () => {
         <p className="text-gray-600">Start from your issue list, then jump to reporting or notifications as needed.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-6 border rounded-lg hover:shadow-md transition-shadow bg-muted/40">
+        <div
+          onClick={() => navigate('/my-issues')}
+          className="p-6 border rounded-lg hover:shadow-md transition-shadow bg-muted/40 cursor-pointer"
+        >
           <h2 className="text-lg font-semibold mb-2">My Issues</h2>
           <p className="text-gray-600 mb-4">This view opens by default so you can immediately track progress.</p>
-          <Button onClick={() => navigate('/my-issues')} variant="secondary" className="w-full">
+          <Button variant="secondary" className="w-full">
             Open Full View
           </Button>
         </div>
-        <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+        <div
+          onClick={() => navigate('/issues/report')}
+          className="p-6 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+        >
           <h2 className="text-lg font-semibold mb-2">Report an Issue</h2>
           <p className="text-gray-600 mb-4">Found a new problem? Capture details and submit a ticket.</p>
-          <Button onClick={() => navigate('/issues/report')} className="w-full">
+          <Button className="w-full">
             Report Issue
           </Button>
         </div>
-        <div className="p-6 border rounded-lg hover:shadow-md transition-shadow">
+        <div
+          onClick={() => navigate('/notifications')}
+          className="p-6 border rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+        >
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">Notifications</h2>
             <Badge>{unreadCount}</Badge>
           </div>
           <p className="text-gray-600 mb-4">Get alerted whenever a status changes so you never miss an update.</p>
-          <Button onClick={() => navigate('/notifications')} variant="outline" className="w-full">
+          <Button variant="outline" className="w-full">
             View Notifications
           </Button>
         </div>
@@ -101,8 +112,9 @@ const App = () => (
             >
               <Routes>
                 {/* Public Routes */}
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<Login />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/change-password" element={<ChangePassword />} />
                 <Route path="/register" element={<Register />} />
                 {/* General Dashboard */}
                 <Route path="/dashboard" element={
@@ -170,6 +182,7 @@ const App = () => (
                 }>
                   <Route index element={<AdminDashboard />} />
                   <Route path="issues" element={<AdminIssueManagement />} />
+                  <Route path="users" element={<UserManagement />} />
                   <Route path="approvals" element={<PendingApprovals />} />
                 </Route>
 

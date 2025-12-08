@@ -79,15 +79,7 @@ const MyIssues: React.FC = () => {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'critical': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
   const stats = {
     total: issues.length,
@@ -271,7 +263,6 @@ const MyIssues: React.FC = () => {
                 <TableRow>
                   <TableHead>Issue</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
@@ -293,11 +284,6 @@ const MyIssues: React.FC = () => {
                         <MapPin className="w-4 h-4 text-gray-400" />
                         <span className="text-sm">{issue.location.name}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getPriorityColor(issue.priority)}>
-                        {issue.priority}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(issue.status)}>
@@ -347,14 +333,6 @@ const MyIssues: React.FC = () => {
                                   </p>
                                 </div>
                                 <div>
-                                  <label className="text-sm font-medium text-gray-500">Priority</label>
-                                  <p className="text-sm">
-                                    <Badge className={getPriorityColor(selectedIssue.priority)}>
-                                      {selectedIssue.priority}
-                                    </Badge>
-                                  </p>
-                                </div>
-                                <div>
                                   <label className="text-sm font-medium text-gray-500">Assigned To</label>
                                   <p className="text-sm">{selectedIssue.assignedToName}</p>
                                 </div>
@@ -382,6 +360,44 @@ const MyIssues: React.FC = () => {
                                   <p className="text-sm">{new Date(selectedIssue.updatedAt).toLocaleString()}</p>
                                 </div>
                               </div>
+
+                              {/* Images Section */}
+                              {selectedIssue.images && selectedIssue.images.length > 0 && (
+                                <div>
+                                  <label className="text-sm font-medium text-gray-500 mb-2 block">Images</label>
+                                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {selectedIssue.images.map((img: string, index: number) => (
+                                      <a key={index} href={img} target="_blank" rel="noopener noreferrer" className="block relative group">
+                                        <img
+                                          src={img}
+                                          alt={`Issue attachment ${index + 1}`}
+                                          className="w-full h-32 object-cover rounded-md border border-gray-200 hover:opacity-90 transition-opacity"
+                                        />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-md" />
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Attachments Section */}
+                              {selectedIssue.attachments && selectedIssue.attachments.length > 0 && (
+                                <div>
+                                  <label className="text-sm font-medium text-gray-500 mb-2 block">Documents</label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {selectedIssue.attachments.map((file: string, index: number) => {
+                                      const fileName = file.split('/').pop()?.split('?')[0] || `Document ${index + 1}`;
+                                      return (
+                                        <a key={index} href={file} target="_blank" rel="noopener noreferrer">
+                                          <Badge variant="outline" className="hover:bg-gray-100 p-2 cursor-pointer flex items-center gap-2">
+                                            <span className="truncate max-w-[200px]">{fileName}</span>
+                                          </Badge>
+                                        </a>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
 
                               {/* Comments Section */}
                               {selectedIssue.comments && selectedIssue.comments.length > 0 && (

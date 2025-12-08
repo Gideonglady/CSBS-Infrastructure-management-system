@@ -58,6 +58,12 @@ const Sidebar: React.FC = () => {
       icon: LayoutDashboard,
       roles: ['admin']
     },
+    {
+      label: 'User Management',
+      href: '/admin/users',
+      icon: Users,
+      roles: ['admin']
+    },
     // Digital Registers - Admin, Faculty, Non-teaching Staff, Lab Technician
     {
       label: 'Digital Registers',
@@ -93,8 +99,21 @@ const Sidebar: React.FC = () => {
     item.roles.includes(user?.role || '')
   );
 
-  const isActive = (href: string) => {
-    return location.pathname === href || location.pathname.startsWith(href + '/');
+  const isActive = (item: any) => {
+    // Exact match for /admin to prevent it from matching /admin/issues
+    if (item.href === '/admin') {
+      return location.pathname === '/admin';
+    }
+
+    // Check if current path matches the item's href or starts with it
+    const isMainActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/');
+
+    // Check if any child is active
+    const isChildActive = item.children?.some((child: any) =>
+      location.pathname === child.href || location.pathname.startsWith(child.href + '/')
+    );
+
+    return isMainActive || isChildActive;
   };
 
   return (
@@ -146,7 +165,7 @@ const Sidebar: React.FC = () => {
       <nav className="flex-1 p-4 space-y-2">
         {filteredItems.map((item) => {
           const Icon = item.icon;
-          const active = isActive(item.href);
+          const active = isActive(item);
 
           return (
             <div key={item.label}>
@@ -168,7 +187,7 @@ const Sidebar: React.FC = () => {
                 <div className="ml-6 mt-2 space-y-1">
                   {item.children.map((child) => {
                     const ChildIcon = child.icon;
-                    const childActive = isActive(child.href);
+                    const childActive = location.pathname === child.href || location.pathname.startsWith(child.href + '/');
 
                     return (
                       <Link

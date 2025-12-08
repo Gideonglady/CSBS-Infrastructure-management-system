@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Menu, Bell, Search, User } from 'lucide-react';
+import React from 'react';
+import { Menu, Bell, User } from 'lucide-react';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, getRoleDisplayName } = useRoleAccess();
   const { unreadCount } = useNotifications();
   const { logout } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
+
 
   const handleLogout = () => {
     logout();
@@ -33,7 +33,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <header className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-50 shadow-sm">
       <div className="flex items-center justify-between">
         {/* Left side */}
         <div className="flex items-center space-x-4">
@@ -45,18 +45,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           >
             <Menu className="w-5 h-5" />
           </Button>
-          
-          <div className="hidden md:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search issues, users, or locations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 w-80"
-              />
-            </div>
-          </div>
+
+
         </div>
 
         {/* Right side */}

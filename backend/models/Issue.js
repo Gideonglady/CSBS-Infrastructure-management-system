@@ -37,13 +37,7 @@ const issueSchema = new mongoose.Schema(
         category: {
             type: String,
             required: [true, 'Category is required'],
-            enum: ['equipment', 'infrastructure', 'safety', 'cleanliness', 'security', 'other'],
-        },
-        priority: {
-            type: String,
-            required: [true, 'Priority is required'],
-            enum: ['low', 'medium', 'high', 'critical'],
-            default: 'medium',
+            enum: ['equipment', 'furniture', 'safety', 'cleanliness', 'electrical_and_electronics'],
         },
         status: {
             type: String,
@@ -55,7 +49,7 @@ const issueSchema = new mongoose.Schema(
             locationType: {
                 type: String,
                 required: true,
-                enum: ['classroom', 'laboratory', 'other'],
+                enum: ['classroom', 'laboratory', 'restroom', 'other'],
             },
             id: {
                 type: String,

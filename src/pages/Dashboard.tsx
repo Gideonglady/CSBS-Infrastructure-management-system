@@ -58,14 +58,7 @@ const Dashboard: React.FC = () => {
     avgResolutionTime: '2.5 days'
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -274,9 +267,9 @@ const Dashboard: React.FC = () => {
                   </Badge>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-600">Priority</p>
-                  <Badge className={getPriorityColor(selectedIssue.priority)}>
-                    {selectedIssue.priority}
+                  <p className="text-sm font-semibold text-gray-600">Status</p>
+                  <Badge className={getStatusColor(selectedIssue.status)}>
+                    {selectedIssue.status}
                   </Badge>
                 </div>
               </div>
@@ -299,6 +292,44 @@ const Dashboard: React.FC = () => {
                 <p className="text-sm font-semibold text-gray-600 mb-1">Reported At</p>
                 <p className="text-sm">{new Date(selectedIssue.createdAt).toLocaleString()}</p>
               </div>
+
+              {/* Images Section */}
+              {selectedIssue.images && selectedIssue.images.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 mb-2">Images</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {selectedIssue.images.map((img: string, index: number) => (
+                      <a key={index} href={img} target="_blank" rel="noopener noreferrer" className="block relative group">
+                        <img
+                          src={img}
+                          alt={`Issue attachment ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-md border border-gray-200 hover:opacity-90 transition-opacity"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-md" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Attachments Section */}
+              {selectedIssue.attachments && selectedIssue.attachments.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 mb-2">Documents</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedIssue.attachments.map((file: string, index: number) => {
+                      const fileName = file.split('/').pop()?.split('?')[0] || `Document ${index + 1}`;
+                      return (
+                        <a key={index} href={file} target="_blank" rel="noopener noreferrer">
+                          <Badge variant="outline" className="hover:bg-gray-100 p-2 cursor-pointer flex items-center gap-2">
+                            <span className="truncate max-w-[200px]">{fileName}</span>
+                          </Badge>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>

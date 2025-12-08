@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Edit, CheckCircle, XCircle, Clock, AlertTriangle, User, MapPin, Calendar } from 'lucide-react';
+import { Search, Filter, Eye, Edit, CheckCircle, XCircle, Clock, AlertTriangle, User, MapPin, Calendar, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { formatDistanceToNow } from 'date-fns';
 import { useSearchParams } from 'react-router-dom';
+import { IssueCategory } from '@/types';
+import { generateAllIssuesReport } from '@/utils/excelGenerator';
 
 const AdminIssueManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -17,7 +19,7 @@ const AdminIssueManagement: React.FC = () => {
   const [filteredIssues, setFilteredIssues] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [updateComment, setUpdateComment] = useState('');
@@ -93,13 +95,13 @@ const AdminIssueManagement: React.FC = () => {
       filtered = filtered.filter(issue => issue.status === statusFilter);
     }
 
-    // Priority filter
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(issue => issue.priority === priorityFilter);
+    // Category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(issue => issue.category === categoryFilter);
     }
 
     setFilteredIssues(filtered);
-  }, [issues, searchQuery, statusFilter, priorityFilter]);
+  }, [issues, searchQuery, statusFilter, categoryFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -107,16 +109,6 @@ const AdminIssueManagement: React.FC = () => {
       case 'in_progress': return 'bg-blue-100 text-blue-800';
       case 'resolved': return 'bg-green-100 text-green-800';
       case 'closed': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'critical': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -164,6 +156,10 @@ const AdminIssueManagement: React.FC = () => {
           <h1 className="text-3xl font-bold">Issue Management</h1>
           <p className="text-gray-600">Manage all reported infrastructure issues</p>
         </div>
+        <Button onClick={() => generateAllIssuesReport(filteredIssues)}>
+          <Download className="w-4 h-4 mr-2" />
+          Generate Report ({filteredIssues.length} issues)
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -244,22 +240,23 @@ const AdminIssueManagement: React.FC = () => {
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Filter by priority" />
+                <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Priority</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
+                {Object.values(IssueCategory).map(cat => (
+                  <SelectItem key={cat} value={cat}>
+                    {cat.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Button variant="outline" onClick={() => {
               setSearchQuery('');
               setStatusFilter('all');
-              setPriorityFilter('all');
+              setCategoryFilter('all');
             }}>
               <Filter className="w-4 h-4 mr-2" />
               Clear Filters
@@ -295,7 +292,6 @@ const AdminIssueManagement: React.FC = () => {
                   <TableHead>Issue</TableHead>
                   <TableHead>Reporter</TableHead>
                   <TableHead>Location</TableHead>
-                  <TableHead>Priority</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Actions</TableHead>
@@ -323,11 +319,6 @@ const AdminIssueManagement: React.FC = () => {
                         <MapPin className="w-4 h-4 text-gray-400" />
                         <span className="text-sm">{issue.location.name}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getPriorityColor(issue.priority)}>
-                        {issue.priority}
-                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(issue.status)}>
@@ -386,14 +377,6 @@ const AdminIssueManagement: React.FC = () => {
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Priority</label>
-                  <p className="text-sm">
-                    <Badge className={getPriorityColor(selectedIssue.priority)}>
-                      {selectedIssue.priority}
-                    </Badge>
-                  </p>
-                </div>
-                <div>
                   <label className="text-sm font-medium text-gray-500">Reporter</label>
                   <p className="text-sm">{selectedIssue.reporterName}</p>
                 </div>
@@ -421,6 +404,45 @@ const AdminIssueManagement: React.FC = () => {
                   <p className="text-sm">{new Date(selectedIssue.updatedAt).toLocaleString()}</p>
                 </div>
               </div>
+
+              {/* Images Section */}
+              {selectedIssue.images && selectedIssue.images.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 mb-2 block">Images</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {selectedIssue.images.map((img: string, index: number) => (
+                      <a key={index} href={img} target="_blank" rel="noopener noreferrer" className="block relative group">
+                        <img
+                          src={img}
+                          alt={`Issue attachment ${index + 1}`}
+                          className="w-full h-32 object-cover rounded-md border border-gray-200 hover:opacity-90 transition-opacity"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-md" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Attachments Section */}
+              {selectedIssue.attachments && selectedIssue.attachments.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 mb-2 block">Documents</label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedIssue.attachments.map((file: string, index: number) => {
+                      const fileName = file.split('/').pop()?.split('?')[0] || `Document ${index + 1}`;
+                      return (
+                        <a key={index} href={file} target="_blank" rel="noopener noreferrer">
+                          <Badge variant="outline" className="hover:bg-gray-100 p-2 cursor-pointer flex items-center gap-2">
+                            <Download className="w-3 h-3" />
+                            <span className="truncate max-w-[200px]">{fileName}</span>
+                          </Badge>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>

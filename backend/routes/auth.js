@@ -80,6 +80,86 @@ router.post(
     }
 );
 
+// @route   POST /api/auth/create-user
+// @desc    Create a new user (Admin only)
+// @access  Private/Admin
+router.post(
+    '/create-user',
+    [
+        authMiddleware,
+        body('email').isEmail().withMessage('Please enter a valid email'),
+        body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+        body('name').notEmpty().withMessage('Name is required'),
+        body('role').isIn(['admin', 'faculty', 'non_teaching_staff', 'class_rep', 'lab_technician', 'lab_incharge', 'staff'])
+            .withMessage('Invalid role'),
+    ],
+    async (req, res) => {
+        try {
+            // Check if user is admin
+            if (req.user.role !== 'admin') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Not authorized to create users'
+                });
+            }
+
+            // Prevent creating admin users
+            if (req.body.role === 'admin') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot create users with admin role'
+                });
+            }
+
+            // Validate input
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({
+                    success: false,
+                    errors: errors.array()
+                });
+            }
+
+            const { email, password, name, role, department, phone } = req.body;
+
+            // Check if user already exists
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'User with this email already exists'
+                });
+            }
+
+            // Create new user
+            const user = new User({
+                email,
+                password,
+                name,
+                role,
+                department,
+                phone,
+            });
+
+            await user.save();
+
+            res.status(201).json({
+                success: true,
+                message: 'User created successfully',
+                data: {
+                    user: user.toJSON(),
+                },
+            });
+        } catch (error) {
+            console.error('Create user error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Server error during user creation'
+            });
+        }
+    }
+);
+
 // @route   POST /api/auth/login
 // @desc    Login user
 // @access  Public
@@ -168,5 +248,63 @@ router.get('/me', authMiddleware, async (req, res) => {
         });
     }
 });
+
+// @route   PUT /api/auth/change-password
+// @desc    Change password
+// @access  Private
+router.put(
+    '/change-password',
+    [
+        authMiddleware,
+        body('currentPassword').notEmpty().withMessage('Current password is required'),
+        body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+    ],
+    async (req, res) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({
+                    success: false,
+                    errors: errors.array()
+                });
+            }
+
+            const { currentPassword, newPassword } = req.body;
+            const user = await User.findById(req.user.id);
+
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
+            // Check current password
+            const isMatch = await user.comparePassword(currentPassword);
+            if (!isMatch) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid current password'
+                });
+            }
+
+            // Update password
+            user.password = newPassword;
+            user.mustChangePassword = false;
+            await user.save();
+
+            res.json({
+                success: true,
+                message: 'Password updated successfully'
+            });
+        } catch (error) {
+            console.error('Change password error:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Server error'
+            });
+        }
+    }
+);
 
 export default router;

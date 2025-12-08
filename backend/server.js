@@ -6,6 +6,8 @@ import authRoutes from './routes/auth.js';
 import issueRoutes from './routes/issues.js';
 import laboratoryRoutes from './routes/laboratories.js';
 import notificationRoutes from './routes/notifications.js';
+import uploadRoutes from './routes/upload.js';
+import usersRoutes from './routes/users.js';
 
 // Initialize Express app
 const app = express();
@@ -24,6 +26,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/laboratories', laboratoryRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/users', usersRoutes);
 
 
 // Health check route

@@ -27,9 +27,16 @@ const Login = () => {
 
     try {
       const loggedInUser = await login({ email, password });
+
+      if (loggedInUser.mustChangePassword) {
+        navigate('/change-password');
+        return;
+      }
+
       const defaultRoute = getDefaultRouteForRole(loggedInUser.role);
-      const targetRoute = from && from !== '/login' ? from : defaultRoute;
-      navigate(targetRoute, { replace: true });
+      // Always redirect to the default route for the user's role to avoid unauthorized access
+      // when switching between users with different roles
+      navigate(defaultRoute, { replace: true });
     } catch (error) {
       setError("Invalid credentials. Please try again.");
     } finally {
@@ -38,7 +45,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">

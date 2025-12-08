@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Upload, X, AlertCircle, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, X, AlertCircle, Send, FileText, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,32 +7,83 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
+import { laboratoryAPI } from "@/services/api";
+
+interface Location {
+  _id: string;
+  name: string;
+  type: string;
+  building?: string;
+  floor?: string;
+}
 
 const ReportIssue = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     category: "",
+    locationType: "",
     location: "",
-    priority: "",
     description: "",
-    suggestedSolution: "",
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      if (files.length + newFiles.length > 5) {
-        toast.error("Maximum 5 files allowed");
+  // Fetch locations when location type changes
+  useEffect(() => {
+    const fetchLocations = async () => {
+      if (!formData.locationType || formData.locationType === "restroom" || formData.locationType === "other") {
+        setLocations([]);
         return;
       }
-      setFiles([...files, ...newFiles]);
+
+      setLoadingLocations(true);
+      try {
+        const response: any = await laboratoryAPI.getAll({ type: formData.locationType });
+        if (response.success && response.data) {
+          setLocations(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+        toast.error("Failed to load locations");
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+
+    fetchLocations();
+  }, [formData.locationType]);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      if (photoFiles.length + newFiles.length > 5) {
+        toast.error("Maximum 5 photos allowed");
+        return;
+      }
+      setPhotoFiles([...photoFiles, ...newFiles]);
     }
   };
 
-  const removeFile = (index: number) => {
-    setFiles(files.filter((_, i) => i !== index));
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      if (documentFiles.length + newFiles.length > 5) {
+        toast.error("Maximum 5 files allowed");
+        return;
+      }
+      setDocumentFiles([...documentFiles, ...newFiles]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotoFiles(photoFiles.filter((_, i) => i !== index));
+  };
+
+  const removeDocument = (index: number) => {
+    setDocumentFiles(documentFiles.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,30 +94,45 @@ const ReportIssue = () => {
       // Import the issueAPI
       const { issueAPI } = await import('@/services/api');
 
-      // Parse location to get details
-      const locationParts = formData.location.split('-');
-      const locationType = locationParts[0] === 'room' ? 'classroom' : locationParts[0] === 'lab' ? 'laboratory' : 'other';
-      const locationId = formData.location;
-      const locationName = formData.location; // You might want to map this to actual names
+      // Get location details
+      let locationName = "";
+      let locationId = "";
+      let building = "";
+      let floor = "";
 
-      // Create issue via API
+      if (formData.locationType === "classroom" || formData.locationType === "laboratory") {
+        const selectedLocation = locations.find(loc => loc._id === formData.location);
+        if (selectedLocation) {
+          locationName = selectedLocation.name;
+          locationId = selectedLocation._id;
+          building = selectedLocation.building || "Main Building";
+          floor = selectedLocation.floor || "1";
+        }
+      } else {
+        locationName = formData.location;
+        locationId = formData.location;
+        building = "Main Building";
+        floor = "1";
+      }
+
+      // Create issue via API with auto-notify admin
       const response: any = await issueAPI.create({
         title: formData.title,
         description: formData.description,
         category: formData.category,
-        priority: formData.priority,
+        priority: "medium", // Default priority since user doesn't select it
         location: {
-          locationType,
+          locationType: formData.locationType,
           id: locationId,
           name: locationName,
-          building: 'Main Building', // Default value
-          floor: '1', // Default value
+          building: building,
+          floor: floor,
         },
         urgency: undefined,
         estimatedImpact: undefined,
         attachments: [],
         images: [],
-        notifyAdmin: true,
+        notifyAdmin: true, // Automatically notify admin
         allowPublicView: false,
       });
 
@@ -76,19 +142,19 @@ const ReportIssue = () => {
       }
 
       toast.success("Issue reported successfully!", {
-        description: "Administrators have been notified and will review your issue shortly",
+        description: "Administrators have been automatically notified and will review your issue shortly",
       });
 
       // Reset form
       setFormData({
         title: "",
         category: "",
+        locationType: "",
         location: "",
-        priority: "",
         description: "",
-        suggestedSolution: "",
       });
-      setFiles([]);
+      setPhotoFiles([]);
+      setDocumentFiles([]);
     } catch (error) {
       console.error('Error submitting issue:', error);
       toast.error("Failed to submit issue", {
@@ -117,9 +183,9 @@ const ReportIssue = () => {
             <p className="font-medium mb-1">Reporting Guidelines</p>
             <ul className="list-disc list-inside text-muted-foreground space-y-1">
               <li>Provide clear and detailed information about the issue</li>
-              <li>Include photos or documents if possible (max 5 files)</li>
-              <li>Select appropriate priority level based on urgency</li>
-              <li>You'll receive a confirmation email with your issue ID</li>
+              <li>Include photos or documents if possible (max 5 each)</li>
+              <li>Select the location type and specific location</li>
+              <li>Administrators will be automatically notified</li>
             </ul>
           </div>
         </div>
@@ -165,64 +231,63 @@ const ReportIssue = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location *</Label>
+                  <Label htmlFor="locationType">Location Type *</Label>
                   <Select
-                    value={formData.location}
-                    onValueChange={(value) => setFormData({ ...formData, location: value })}
+                    value={formData.locationType}
+                    onValueChange={(value) => setFormData({ ...formData, locationType: value, location: "" })}
                     required
                   >
                     <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select location" />
+                      <SelectValue placeholder="Select location type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="room-301">Classroom - Room 301</SelectItem>
-                      <SelectItem value="room-305">Classroom - Room 305</SelectItem>
-                      <SelectItem value="lab-1">Computer Lab 1</SelectItem>
-                      <SelectItem value="lab-2">Computer Lab 2</SelectItem>
-                      <SelectItem value="lab-physics">Physics Laboratory</SelectItem>
+                      <SelectItem value="classroom">Classroom</SelectItem>
+                      <SelectItem value="laboratory">Laboratory</SelectItem>
+                      <SelectItem value="restroom">Restroom</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority Level *</Label>
-                <Select
-                  value={formData.priority}
-                  onValueChange={(value) => setFormData({ ...formData, priority: value })}
-                  required
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-muted" />
-                        Low - Can wait a few days
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="medium">
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-accent" />
-                        Medium - Should be addressed soon
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="high">
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-warning" />
-                        High - Needs attention within 24 hours
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="critical">
-                      <span className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-destructive" />
-                        Critical - Immediate action required
-                      </span>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {formData.locationType && (
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location Details *</Label>
+                  {(formData.locationType === "classroom" || formData.locationType === "laboratory") ? (
+                    <Select
+                      value={formData.location}
+                      onValueChange={(value) => setFormData({ ...formData, location: value })}
+                      required
+                      disabled={loadingLocations}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder={loadingLocations ? "Loading..." : `Select ${formData.locationType}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locations.length === 0 && !loadingLocations && (
+                          <SelectItem value="none" disabled>No {formData.locationType}s available</SelectItem>
+                        )}
+                        {locations.map((loc) => (
+                          <SelectItem key={loc._id} value={loc._id}>
+                            {loc.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id="location"
+                      placeholder={`Enter ${formData.locationType} location details`}
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      required
+                      className="h-11"
+                    />
+                  )}
+                </div>
+              )}
+
+
 
               <div className="space-y-2">
                 <Label htmlFor="description">Detailed Description *</Label>
@@ -237,58 +302,92 @@ const ReportIssue = () => {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="suggestedSolution">Suggested Solution (Optional)</Label>
-                <Textarea
-                  id="suggestedSolution"
-                  placeholder="If you have any suggestions for resolving this issue, please share them here..."
-                  value={formData.suggestedSolution}
-                  onChange={(e) => setFormData({ ...formData, suggestedSolution: e.target.value })}
-                  rows={4}
-                  className="resize-none"
-                />
-              </div>
 
-              <div className="space-y-2">
-                <Label>Attachments (Optional)</Label>
-                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary transition-colors">
-                  <input
-                    type="file"
-                    id="file-upload"
-                    className="hidden"
-                    multiple
-                    accept="image/*,.pdf,.doc,.docx"
-                    onChange={handleFileChange}
-                    disabled={files.length >= 5}
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <Upload className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm font-medium mb-1">Click to upload files</p>
-                    <p className="text-xs text-muted-foreground">
-                      PNG, JPG, PDF, DOC (max 5 files, 10MB each)
-                    </p>
-                  </label>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Add Photos (Optional)</Label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors">
+                    <input
+                      type="file"
+                      id="photo-upload"
+                      className="hidden"
+                      multiple
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      disabled={photoFiles.length >= 5}
+                    />
+                    <label htmlFor="photo-upload" className="cursor-pointer">
+                      <Image className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium mb-1">Upload Photos</p>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, JPG (max 5 photos)
+                      </p>
+                    </label>
+                  </div>
+
+                  {photoFiles.length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      {photoFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                        >
+                          <span className="text-sm truncate flex-1">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(index)}
+                            className="text-destructive hover:text-destructive/80 ml-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {files.length > 0 && (
-                  <div className="space-y-2 mt-4">
-                    {files.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                      >
-                        <span className="text-sm truncate flex-1">{file.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="text-destructive hover:text-destructive/80 ml-2"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+                <div className="space-y-2">
+                  <Label>Add Files (Optional)</Label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors">
+                    <input
+                      type="file"
+                      id="document-upload"
+                      className="hidden"
+                      multiple
+                      accept=".pdf,.doc,.docx,.txt"
+                      onChange={handleDocumentChange}
+                      disabled={documentFiles.length >= 5}
+                    />
+                    <label htmlFor="document-upload" className="cursor-pointer">
+                      <FileText className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm font-medium mb-1">Upload Files</p>
+                      <p className="text-xs text-muted-foreground">
+                        PDF, DOC, TXT (max 5 files)
+                      </p>
+                    </label>
                   </div>
-                )}
+
+                  {documentFiles.length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      {documentFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                        >
+                          <span className="text-sm truncate flex-1">{file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeDocument(index)}
+                            className="text-destructive hover:text-destructive/80 ml-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-4 pt-4">

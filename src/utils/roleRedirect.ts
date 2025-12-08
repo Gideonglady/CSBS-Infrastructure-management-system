@@ -3,7 +3,7 @@ import { UserRole } from '@/types/auth';
 export const getDefaultRouteForRole = (role?: UserRole): string => {
   switch (role) {
     case UserRole.ADMIN:
-      return '/dashboard';
+      return '/admin';
     case UserRole.FACULTY:
     case UserRole.NON_TEACHING_STAFF:
       return '/registers';

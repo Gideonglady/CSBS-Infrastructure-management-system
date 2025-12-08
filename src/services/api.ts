@@ -58,6 +58,27 @@ export const authAPI = {
         const response = await api.get('/api/auth/me');
         return response; // Interceptor already returns response.data
     },
+
+    createUser: async (data: any) => {
+        const response = await api.post('/api/auth/create-user', data);
+        return response;
+    },
+
+    changePassword: async (data: any) => {
+        const response = await api.put('/api/auth/change-password', data);
+        return response;
+    },
+};
+
+export const userAPI = {
+    getAll: async () => {
+        const response = await api.get('/api/users');
+        return response;
+    },
+    deleteUser: async (id: string) => {
+        const response = await api.delete(`/api/users/${id}`);
+        return response;
+    }
 };
 
 // Issue API endpoints
@@ -147,6 +168,35 @@ export const notificationAPI = {
 
     markAllAsRead: async () => {
         const response = await api.patch('/api/notifications/read-all');
+        return response;
+    },
+};
+
+// Upload API endpoints
+export const uploadAPI = {
+    uploadImages: async (files: File[]) => {
+        const formData = new FormData();
+        files.forEach(file => {
+            formData.append('images', file);
+        });
+        const response = await api.post('/api/upload/images', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response;
+    },
+
+    uploadDocuments: async (files: File[]) => {
+        const formData = new FormData();
+        files.forEach(file => {
+            formData.append('documents', file);
+        });
+        const response = await api.post('/api/upload/documents', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
         return response;
     },
 };

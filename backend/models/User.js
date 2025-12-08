@@ -24,18 +24,18 @@ const userSchema = new mongoose.Schema(
         role: {
             type: String,
             required: [true, 'Role is required'],
-            enum: ['admin', 'faculty', 'non_teaching_staff', 'class_rep', 'lab_technician', 'lab_incharge'],
+            enum: ['admin', 'faculty', 'non_teaching_staff', 'class_rep', 'lab_technician', 'lab_incharge', 'staff'],
             default: 'class_rep',
-        },
-        department: {
-            type: String,
-            trim: true,
         },
         phone: {
             type: String,
             trim: true,
         },
         isActive: {
+            type: Boolean,
+            default: true,
+        },
+        mustChangePassword: {
             type: Boolean,
             default: true,
         },

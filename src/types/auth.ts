@@ -18,6 +18,7 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   isActive: boolean;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthState {

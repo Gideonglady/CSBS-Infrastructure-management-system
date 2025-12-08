@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, Paperclip, MapPin, AlertTriangle, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,20 +9,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
-import { IssueCategory, IssuePriority } from '@/types';
+import { IssueCategory } from '@/types';
 import { getDefaultRouteForRole } from '@/utils/roleRedirect';
+import { laboratoryAPI, uploadAPI } from '@/services/api';
+import { toast } from 'sonner';
 
 const IssueReporting = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locations, setLocations] = useState<any[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: '',
-    priority: '',
     location: {
       type: '',
       id: '',
@@ -30,38 +32,42 @@ const IssueReporting = () => {
       building: '',
       floor: ''
     },
-    urgency: '',
-    estimatedImpact: '',
     attachments: [] as File[],
-    images: [] as File[],
-    notifyAdmin: true,
-    allowPublicView: false
+    images: [] as File[]
   });
 
   const categories = [
     { value: 'equipment', label: 'Equipment', icon: '🔧' },
-    { value: 'infrastructure', label: 'Infrastructure', icon: '🏢' },
+    { value: 'furniture', label: 'Furniture', icon: '🪑' },
     { value: 'safety', label: 'Safety', icon: '⚠️' },
     { value: 'cleanliness', label: 'Cleanliness', icon: '🧹' },
-    { value: 'security', label: 'Security', icon: '🔒' },
-    { value: 'other', label: 'Other', icon: '📋' }
+    { value: 'electrical_and_electronics', label: 'Electrical and Electronics', icon: '⚡' }
   ];
 
-  const priorities = [
-    { value: 'low', label: 'Low', color: 'bg-green-100 text-green-800' },
-    { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-800' },
-    { value: 'critical', label: 'Critical', color: 'bg-red-100 text-red-800' }
-  ];
+  // Fetch locations when location type changes
+  useEffect(() => {
+    const fetchLocations = async () => {
+      if (!formData.location.type || formData.location.type === 'restroom' || formData.location.type === 'other') {
+        setLocations([]);
+        return;
+      }
 
-  const locations = [
-    { type: 'classroom', id: '1', name: 'Room 101', building: 'Computer Science Building', floor: 1 },
-    { type: 'classroom', id: '2', name: 'Room 205', building: 'Engineering Building', floor: 2 },
-    { type: 'laboratory', id: '3', name: 'Computer Lab 1', building: 'Computer Science Building', floor: 2 },
-    { type: 'laboratory', id: '4', name: 'Chemistry Lab A', building: 'Science Building', floor: 1 },
-    { type: 'other', id: '5', name: 'Main Entrance', building: 'Main Building', floor: 0 },
-    { type: 'other', id: '6', name: 'Parking Lot', building: 'N/A', floor: 0 }
-  ];
+      setLoadingLocations(true);
+      try {
+        const response: any = await laboratoryAPI.getAll({ type: formData.location.type });
+        if (response.success && response.data) {
+          setLocations(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+        toast.error('Failed to load locations');
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+
+    fetchLocations();
+  }, [formData.location.type]);
 
   const handleInputChange = (field: string, value: any) => {
     if (field.startsWith('location.')) {
@@ -99,12 +105,37 @@ const IssueReporting = () => {
       // Import the issueAPI
       const { issueAPI } = await import('@/services/api');
 
-      // Create issue via API
+      // Upload files first if any
+      let attachmentUrls: string[] = [];
+      let imageUrls: string[] = [];
+
+      try {
+        if (formData.attachments.length > 0) {
+          const uploadResponse: any = await uploadAPI.uploadDocuments(formData.attachments);
+          if (uploadResponse.success) {
+            attachmentUrls = uploadResponse.data;
+          }
+        }
+
+        if (formData.images.length > 0) {
+          const uploadResponse: any = await uploadAPI.uploadImages(formData.images);
+          if (uploadResponse.success) {
+            imageUrls = uploadResponse.data;
+          }
+        }
+      } catch (uploadError) {
+        console.error('Error uploading files:', uploadError);
+        toast.error('Failed to upload files. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Create issue via API with auto-notify admin
       const response: any = await issueAPI.create({
         title: formData.title,
         description: formData.description,
         category: formData.category,
-        priority: formData.priority,
+
         location: {
           locationType: formData.location.type,
           id: formData.location.id,
@@ -112,12 +143,12 @@ const IssueReporting = () => {
           building: formData.location.building,
           floor: formData.location.floor,
         },
-        urgency: formData.urgency || undefined,
-        estimatedImpact: formData.estimatedImpact || undefined,
-        attachments: formData.attachments.map(f => f.name),
-        images: formData.images.map(f => f.name),
-        notifyAdmin: formData.notifyAdmin,
-        allowPublicView: formData.allowPublicView,
+        urgency: undefined,
+        estimatedImpact: undefined,
+        attachments: attachmentUrls,
+        images: imageUrls,
+        notifyAdmin: true, // Automatically notify admin
+        allowPublicView: false,
       });
 
       // Check if the response indicates success
@@ -130,18 +161,15 @@ const IssueReporting = () => {
         title: '',
         description: '',
         category: '',
-        priority: '',
         location: { type: '', id: '', name: '', building: '', floor: '' },
-        urgency: '',
-        estimatedImpact: '',
         attachments: [],
-        images: [],
-        notifyAdmin: true,
-        allowPublicView: false
+        images: []
       });
 
       // Show success message
-      alert('Issue reported successfully! It has been routed to the administrator for review.');
+      toast.success('Issue reported successfully!', {
+        description: 'Administrators have been automatically notified and will review your issue shortly'
+      });
 
       navigate(getDefaultRouteForRole(user?.role));
     } catch (error) {
@@ -222,23 +250,6 @@ const IssueReporting = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="priority">Priority *</Label>
-                <Select value={formData.priority} onValueChange={(value) => handleInputChange('priority', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {priorities.map((priority) => (
-                      <SelectItem key={priority.value} value={priority.value}>
-                        <Badge className={priority.color}>
-                          {priority.label}
-                        </Badge>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -259,7 +270,14 @@ const IssueReporting = () => {
               <Label>Location Type *</Label>
               <RadioGroup
                 value={formData.location.type}
-                onValueChange={(value) => handleInputChange('location.type', value)}
+                onValueChange={(value) => {
+                  handleInputChange('location.type', value);
+                  // Reset location details when type changes
+                  setFormData(prev => ({
+                    ...prev,
+                    location: { ...prev.location, type: value, id: '', name: '', building: '', floor: '' }
+                  }));
+                }}
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="classroom" id="classroom" />
@@ -270,6 +288,10 @@ const IssueReporting = () => {
                   <Label htmlFor="laboratory">Laboratory</Label>
                 </div>
                 <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="restroom" id="restroom" />
+                  <Label htmlFor="restroom">Restroom</Label>
+                </div>
+                <div className="flex items-center space-x-2">
                   <RadioGroupItem value="other" id="other" />
                   <Label htmlFor="other">Other</Label>
                 </div>
@@ -278,167 +300,127 @@ const IssueReporting = () => {
 
             {formData.location.type && (
               <div className="space-y-2">
-                <Label htmlFor="location">Specific Location *</Label>
-                <Select
-                  value={formData.location.id}
-                  onValueChange={(value) => {
-                    const selectedLocation = locations.find(loc => loc.id === value);
-                    if (selectedLocation) {
+                <Label htmlFor="location">Location Details *</Label>
+                {(formData.location.type === 'classroom' || formData.location.type === 'laboratory') ? (
+                  <Select
+                    value={formData.location.id}
+                    onValueChange={(value) => {
+                      const selectedLocation = locations.find(loc => loc._id === value);
+                      if (selectedLocation) {
+                        setFormData(prev => ({
+                          ...prev,
+                          location: {
+                            type: formData.location.type,
+                            id: selectedLocation._id,
+                            name: selectedLocation.name,
+                            building: selectedLocation.building || 'Main Building',
+                            floor: selectedLocation.floor?.toString() || '1'
+                          }
+                        }));
+                      }
+                    }}
+                    disabled={loadingLocations}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={loadingLocations ? 'Loading...' : `Select ${formData.location.type}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.length === 0 && !loadingLocations && (
+                        <SelectItem value="none" disabled>No {formData.location.type}s available</SelectItem>
+                      )}
+                      {locations.map((location) => (
+                        <SelectItem key={location._id} value={location._id}>
+                          {location.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="location-manual"
+                    placeholder={`Enter ${formData.location.type} location details`}
+                    value={formData.location.name}
+                    onChange={(e) => {
+                      const value = e.target.value;
                       setFormData(prev => ({
                         ...prev,
                         location: {
-                          type: selectedLocation.type,
-                          id: selectedLocation.id,
-                          name: selectedLocation.name,
-                          building: selectedLocation.building,
-                          floor: selectedLocation.floor.toString()
+                          ...prev.location,
+                          id: value,
+                          name: value,
+                          building: 'Main Building',
+                          floor: '1'
                         }
                       }));
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locations
-                      .filter(loc => loc.type === formData.location.type)
-                      .map((location) => (
-                        <SelectItem key={location.id} value={location.id}>
-                          {location.name} - {location.building}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                    }}
+                    required
+                  />
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Additional Information */}
+        {/* Attachments */}
         <Card>
           <CardHeader>
-            <CardTitle>Additional Information</CardTitle>
+            <CardTitle>Attachments (Optional)</CardTitle>
             <CardDescription>
-              Help us understand the impact and urgency of this issue
+              Add photos or files to help illustrate the issue
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="urgency">How urgent is this issue?</Label>
-                <Select value={formData.urgency} onValueChange={(value) => handleInputChange('urgency', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select urgency level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="not_urgent">Not Urgent - Can wait</SelectItem>
-                    <SelectItem value="somewhat_urgent">Somewhat Urgent - Should be addressed soon</SelectItem>
-                    <SelectItem value="urgent">Urgent - Needs immediate attention</SelectItem>
-                    <SelectItem value="critical">Critical - Emergency situation</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('images')?.click()}
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Add Photos
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('attachments')?.click()}
+                >
+                  <Paperclip className="w-4 h-4 mr-2" />
+                  Add Files
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="impact">Estimated Impact</Label>
-                <Select value={formData.estimatedImpact} onValueChange={(value) => handleInputChange('estimatedImpact', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select impact level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minimal">Minimal - Affects few users</SelectItem>
-                    <SelectItem value="moderate">Moderate - Affects some users</SelectItem>
-                    <SelectItem value="significant">Significant - Affects many users</SelectItem>
-                    <SelectItem value="severe">Severe - Affects entire department</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Attachments</Label>
-                <div className="flex items-center space-x-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('images')?.click()}
-                  >
-                    <Camera className="w-4 h-4 mr-2" />
-                    Add Photos
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById('attachments')?.click()}
-                  >
-                    <Paperclip className="w-4 h-4 mr-2" />
-                    Add Files
-                  </Button>
-                </div>
-                <input
-                  id="images"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => handleFileUpload('images', e.target.files)}
-                />
-                <input
-                  id="attachments"
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => handleFileUpload('attachments', e.target.files)}
-                />
-                {(formData.images.length > 0 || formData.attachments.length > 0) && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600">Selected files:</p>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {formData.images.map((file, index) => (
-                        <Badge key={index} variant="secondary">
-                          📷 {file.name}
-                        </Badge>
-                      ))}
-                      {formData.attachments.map((file, index) => (
-                        <Badge key={index} variant="secondary">
-                          📎 {file.name}
-                        </Badge>
-                      ))}
-                    </div>
+              <input
+                id="images"
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFileUpload('images', e.target.files)}
+              />
+              <input
+                id="attachments"
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => handleFileUpload('attachments', e.target.files)}
+              />
+              {(formData.images.length > 0 || formData.attachments.length > 0) && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600">Selected files:</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {formData.images.map((file, index) => (
+                      <Badge key={index} variant="secondary">
+                        📷 {file.name}
+                      </Badge>
+                    ))}
+                    {formData.attachments.map((file, index) => (
+                      <Badge key={index} variant="secondary">
+                        📎 {file.name}
+                      </Badge>
+                    ))}
                   </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Notification Preferences */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Notification Preferences</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="notify-admin"
-                checked={formData.notifyAdmin}
-                onCheckedChange={(checked) => handleInputChange('notifyAdmin', checked)}
-              />
-              <Label htmlFor="notify-admin">
-                Notify administrators immediately
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="allow-public"
-                checked={formData.allowPublicView}
-                onCheckedChange={(checked) => handleInputChange('allowPublicView', checked)}
-              />
-              <Label htmlFor="allow-public">
-                Allow other users to view this issue (for transparency)
-              </Label>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
