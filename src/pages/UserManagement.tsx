@@ -177,7 +177,7 @@ const UserManagement = () => {
         } catch (error: any) {
             toast({
                 title: "Error",
-                description: error.response?.data?.message || "An error occurred",
+                description: error.message || (Array.isArray(error.errors) ? error.errors[0].msg : "An error occurred"),
                 variant: "destructive",
             });
         } finally {

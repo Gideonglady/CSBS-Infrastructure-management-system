@@ -10,6 +10,7 @@ import uploadRoutes from './routes/upload.js';
 import usersRoutes from './routes/users.js';
 import labSystemsRoutes from './routes/labSystems.js';
 import transferRequestsRoutes from './routes/transferRequests.js';
+import actionRoutes from './routes/actions.js';
 
 // Initialize Express app
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/lab-systems', labSystemsRoutes);
 app.use('/api/transfer-requests', transferRequestsRoutes);
+app.use('/api/actions', actionRoutes);
 
 
 // Health check route

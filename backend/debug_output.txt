@@ -1,0 +1,19 @@
+--- LATEST TRANSFER REQUEST ---
+{
+  "_id": "69385c706aa2c567ae75aa9c",
+  "actionType": "transfer",
+  "sourceLocation": "69366c86cbfe174dd8cbbd1d",
+  "destinationLocation": "69366c86cbfe174dd8cbbd48",
+  "previousState_labName": "Agile Software Engineering Lab",
+  "data": {
+    "sysID": "sys03",
+    "processor": "i5",
+    "ram": "16GB",
+    "hdd": "1TB",
+    "softwareAvailable": "Dev C++, Turbo C++, Visual Studio, Oracle, Java, MatLab, Python, Emulator8086, R studio",
+    "equipment": "",
+    "destinationName": "Integrated Business Application Lab",
+    "notes": ""
+  }
+}
+-------------------------------

@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { laboratoryAPI } from '@/services/api';
 import { Laboratory } from '@/types/laboratory';
 import { useAuth } from '@/contexts/AuthContext';
+import ActionHistoryDialog from '@/components/ActionHistoryDialog';
 
 interface ClassroomSummary {
   _id: string;
@@ -50,9 +51,12 @@ const Classrooms = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Classroom Registers</h1>
-        <p className="text-gray-600">CSBS Department - Classroom Infrastructure</p>
+      <div className="flex justify-between items-center">
+        <div>
+           <h1 className="text-3xl font-bold">Classroom Registers</h1>
+           <p className="text-gray-600">CSBS Department - Classroom Infrastructure</p>
+        </div>
+        <ActionHistoryDialog />
       </div>
 
       {/* Stats Cards */}

@@ -282,5 +282,33 @@ export const transferAPI = {
     },
 };
 
+// Action Request API endpoints
+export const actionsAPI = {
+    submit: async (data: any) => {
+        const response = await api.post('/api/actions', data);
+        return response;
+    },
+    getPending: async () => {
+        const response = await api.get('/api/actions/pending');
+        return response;
+    },
+    getHistory: async () => {
+        const response = await api.get('/api/actions/history');
+        return response;
+    },
+    approve: async (id: string, notes?: string) => {
+        const response = await api.put(`/api/actions/${id}/approve`, { notes });
+        return response;
+    },
+    reject: async (id: string, reason: string) => {
+        const response = await api.put(`/api/actions/${id}/reject`, { rejectionReason: reason });
+        return response;
+    },
+    revert: async (id: string) => {
+        const response = await api.post(`/api/actions/${id}/revert`);
+        return response;
+    },
+};
+
 export default api;
 

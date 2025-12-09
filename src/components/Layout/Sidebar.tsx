@@ -16,7 +16,7 @@ import {
   Bell,
   UserCheck,
   ArrowRightLeft,
-  CheckSquare
+
 } from 'lucide-react';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { useAuth } from '@/contexts/AuthContext';
@@ -95,13 +95,7 @@ const Sidebar: React.FC = () => {
       icon: ArrowRightLeft,
       roles: ['staff', 'lab_technician']
     },
-    // Transfer Approvals - Admin only
-    {
-      label: 'Transfer Approvals',
-      href: '/admin/transfer-approvals',
-      icon: CheckSquare,
-      roles: ['admin']
-    },
+
     // Notifications - Everyone
     {
       label: 'Notifications',
