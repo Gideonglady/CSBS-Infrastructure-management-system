@@ -170,6 +170,16 @@ export const notificationAPI = {
         const response = await api.patch('/api/notifications/read-all');
         return response;
     },
+
+    delete: async (id: string) => {
+        const response = await api.delete(`/api/notifications/${id}`);
+        return response;
+    },
+
+    cleanupDuplicates: async () => {
+        const response = await api.delete('/api/notifications/cleanup/duplicates');
+        return response;
+    },
 };
 
 // Upload API endpoints

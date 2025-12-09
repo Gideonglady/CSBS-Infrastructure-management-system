@@ -440,45 +440,7 @@ const Notifications = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Notification Types Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Notification Types</CardTitle>
-          <CardDescription>Understanding different notification types</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex items-center space-x-3">
-              <span className="text-2xl">ℹ️</span>
-              <div>
-                <p className="font-medium">Information</p>
-                <p className="text-sm text-gray-500">General updates</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <span className="text-2xl">✅</span>
-              <div>
-                <p className="font-medium">Success</p>
-                <p className="text-sm text-gray-500">Completed actions</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <span className="text-2xl">⚠️</span>
-              <div>
-                <p className="font-medium">Warning</p>
-                <p className="text-sm text-gray-500">Important notices</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <span className="text-2xl">❌</span>
-              <div>
-                <p className="font-medium">Error</p>
-                <p className="text-sm text-gray-500">Issues requiring attention</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* Issue Details Dialog */}
       {selectedIssue && (

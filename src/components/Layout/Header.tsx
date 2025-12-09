@@ -23,8 +23,42 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, getRoleDisplayName } = useRoleAccess();
-  const { unreadCount } = useNotifications();
+  const { notifications, unreadCount, markAsRead } = useNotifications();
   const { logout } = useAuth();
+
+  // Get the 5 most recent notifications for the dropdown
+  const recentNotifications = notifications.slice(0, 5);
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'success': return '✅';
+      case 'warning': return '⚠️';
+      case 'error': return '❌';
+      default: return 'ℹ️';
+    }
+  };
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - new Date(date).getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    return `${Math.floor(diffInSeconds / 86400)} days ago`;
+  };
+
+  const handleNotificationClick = (notification: any) => {
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+    // Navigate to notifications page or specific action URL
+    if (notification.actionUrl) {
+      window.location.href = notification.actionUrl;
+    } else {
+      window.location.href = '/notifications';
+    }
+  };
 
 
   const handleLogout = () => {
@@ -69,30 +103,43 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
             <DropdownMenuContent align="end" className="w-80">
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">New issue reported</p>
-                  <p className="text-xs text-gray-500">Lab equipment malfunction in Room 101</p>
-                  <p className="text-xs text-gray-400">2 minutes ago</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">Issue resolved</p>
-                  <p className="text-xs text-gray-500">Projector fixed in Room 205</p>
-                  <p className="text-xs text-gray-400">1 hour ago</p>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium">Maintenance scheduled</p>
-                  <p className="text-xs text-gray-500">Lab equipment maintenance due tomorrow</p>
-                  <p className="text-xs text-gray-400">3 hours ago</p>
-                </div>
-              </DropdownMenuItem>
+              {recentNotifications.length === 0 ? (
+                <DropdownMenuItem disabled>
+                  <div className="flex flex-col space-y-1 w-full text-center py-4">
+                    <p className="text-sm text-gray-500">No notifications</p>
+                  </div>
+                </DropdownMenuItem>
+              ) : (
+                recentNotifications.map((notification) => (
+                  <DropdownMenuItem
+                    key={notification.id}
+                    onClick={() => handleNotificationClick(notification)}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex items-start space-x-2 w-full">
+                      <span className="text-lg mt-0.5">{getNotificationIcon(notification.type)}</span>
+                      <div className="flex flex-col space-y-1 flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className={`text-sm font-medium truncate ${!notification.read ? 'font-semibold' : ''}`}>
+                            {notification.title}
+                          </p>
+                          {!notification.read && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 flex-shrink-0"></div>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 line-clamp-2">{notification.message}</p>
+                        <p className="text-xs text-gray-400">{formatTimeAgo(notification.createdAt)}</p>
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                ))
+              )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-center">
-                <span className="text-sm text-primary">View all notifications</span>
+              <DropdownMenuItem 
+                className="text-center cursor-pointer"
+                onClick={() => window.location.href = '/notifications'}
+              >
+                <span className="text-sm text-primary w-full">View all notifications</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

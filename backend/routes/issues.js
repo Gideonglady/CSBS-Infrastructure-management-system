@@ -212,6 +212,9 @@ router.patch('/:id/status', protect, async (req, res) => {
             });
         }
 
+        // Store the old status to check if it changed
+        const oldStatus = issue.status;
+
         // Update status
         issue.status = status;
 
@@ -228,19 +231,29 @@ router.patch('/:id/status', protect, async (req, res) => {
 
         await issue.save();
 
-        // Notify reporter if issue is resolved
-        if (status === 'resolved') {
-            await Notification.create({
+        // Notify reporter if issue status changed to resolved (and wasn't already resolved)
+        if (status === 'resolved' && oldStatus !== 'resolved') {
+            // Check if a resolution notification already exists for this issue
+            const existingNotification = await Notification.findOne({
                 userId: issue.reporterId,
-                title: 'Issue Resolved',
-                message: `Good news! Your issue "${issue.title}" has been resolved.`,
-                type: 'success',
-                read: false,
-                metadata: {
-                    issueId: issue._id,
-                    category: issue.category
-                }
+                'metadata.issueId': issue._id.toString(),
+                title: 'Issue Resolved'
             });
+
+            // Only create notification if one doesn't already exist
+            if (!existingNotification) {
+                await Notification.create({
+                    userId: issue.reporterId,
+                    title: 'Issue Resolved',
+                    message: `Good news! Your issue "${issue.title}" has been resolved.`,
+                    type: 'success',
+                    read: false,
+                    metadata: {
+                        issueId: issue._id.toString(),
+                        category: issue.category
+                    }
+                });
+            }
         }
 
         res.json({

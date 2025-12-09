@@ -8,6 +8,7 @@ interface NotificationContextType {
   markAllAsRead: () => void;
   addNotification: (notification: Omit<Notification, 'id' | 'createdAt'>) => void;
   removeNotification: (id: string) => void;
+  cleanupDuplicates: () => Promise<any>;
 }
 
 type NotificationAction =
@@ -220,8 +221,56 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   };
 
-  const removeNotification = (id: string) => {
+  const removeNotification = async (id: string) => {
+    try {
+      // Call backend API to delete notification
+      const token = localStorage.getItem('token');
+      if (token) {
+        const { notificationAPI } = await import('@/services/api');
+        await notificationAPI.delete(id);
+      }
+    } catch (error) {
+      console.error('Error deleting notification from backend:', error);
+    }
+
+    // Update local state
     dispatch({ type: 'REMOVE_NOTIFICATION', payload: id });
+
+    // Remove from localStorage
+    try {
+      const updatedNotifications = state.notifications.filter(n => n.id !== id);
+      localStorage.setItem('dims-notifications', JSON.stringify(updatedNotifications));
+    } catch (error) {
+      console.error('Error updating localStorage:', error);
+    }
+  };
+
+  const cleanupDuplicates = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const { notificationAPI } = await import('@/services/api');
+      const response: any = await notificationAPI.cleanupDuplicates();
+
+      if (response && response.success) {
+        // Reload notifications after cleanup
+        const allNotifications: any = await notificationAPI.getAll();
+        if (allNotifications && allNotifications.success && Array.isArray(allNotifications.data)) {
+          const mappedNotifications = allNotifications.data.map((notif: any) => ({
+            ...notif,
+            id: notif._id || notif.id,
+            createdAt: new Date(notif.createdAt),
+          }));
+          dispatch({ type: 'SET_NOTIFICATIONS', payload: mappedNotifications });
+          localStorage.setItem('dims-notifications', JSON.stringify(mappedNotifications));
+        }
+        return response;
+      }
+    } catch (error) {
+      console.error('Error cleaning up duplicates:', error);
+      throw error;
+    }
   };
 
   const value: NotificationContextType = {
@@ -230,7 +279,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     markAsRead,
     markAllAsRead,
     addNotification,
-    removeNotification
+    removeNotification,
+    cleanupDuplicates
   };
 
   return (
