@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,17 +14,22 @@ import {
   CheckCircle,
   XCircle,
   Plus,
-  Eye
+  Eye,
+  MapPin,
+  ExternalLink
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { UserRole } from '@/types/auth';
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { user, getRoleDisplayName, getRoleColor } = useRoleAccess();
   const [selectedIssue, setSelectedIssue] = useState<any>(null);
 
   const [issues, setIssues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assignedLocations, setAssignedLocations] = useState<any[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
 
   // Load issues from API
   useEffect(() => {
@@ -43,6 +49,26 @@ const Dashboard: React.FC = () => {
     };
 
     loadIssues();
+  }, []);
+
+  // Load assigned locations
+  useEffect(() => {
+    const loadAssignedLocations = async () => {
+      try {
+        const { userAPI } = await import('@/services/api');
+        const response: any = await userAPI.getUserLocations();
+
+        if (response && response.success !== false && response.data) {
+          setAssignedLocations(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading assigned locations:', error);
+      } finally {
+        setLoadingLocations(false);
+      }
+    };
+
+    loadAssignedLocations();
   }, []);
 
   // Calculate stats from real data
@@ -141,6 +167,61 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* My Assigned Locations */}
+      {assignedLocations.length > 0 && (
+        <div>
+          <h2 className="text-xl font-bold mb-4">My Assigned Locations</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {assignedLocations.map((location: any) => (
+              <Card key={location._id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{location.name}</CardTitle>
+                      <CardDescription className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="capitalize">
+                          {location.type}
+                        </Badge>
+                        {location.building && (
+                          <span className="text-xs">
+                            {location.building}
+                            {location.floor && `, Floor ${location.floor}`}
+                          </span>
+                        )}
+                      </CardDescription>
+                    </div>
+                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {location.numberOfSystems > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">{location.numberOfSystems}</span> systems
+                      </p>
+                    )}
+                    {location.department && (
+                      <p className="text-sm text-muted-foreground">
+                        Department: <span className="font-medium">{location.department}</span>
+                      </p>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-2"
+                      onClick={() => navigate(`/digital-registers/${location.type === 'laboratory' ? 'laboratories' : 'classrooms'}`)}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Digital Registry
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Role-specific content */}
       {/* All Issues */}

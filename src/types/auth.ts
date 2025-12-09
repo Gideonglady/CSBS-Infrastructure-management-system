@@ -4,7 +4,8 @@ export enum UserRole {
   NON_TEACHING_STAFF = 'non_teaching_staff',
   CLASS_REP = 'class_rep',
   LAB_TECHNICIAN = 'lab_technician',
-  LAB_INCHARGE = 'lab_incharge'
+  LAB_INCHARGE = 'lab_incharge',
+  STAFF = 'staff'
 }
 
 export interface User {

@@ -120,7 +120,7 @@ router.post(
                 });
             }
 
-            const { email, password, name, role, department, phone } = req.body;
+            const { email, password, name, role, department, phone, assignedLocations } = req.body;
 
             // Check if user already exists
             const existingUser = await User.findOne({ email });
@@ -139,6 +139,7 @@ router.post(
                 role,
                 department,
                 phone,
+                assignedLocations: assignedLocations || [],
             });
 
             await user.save();

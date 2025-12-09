@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { authAPI, userAPI } from '@/services/api';
-import { Loader2, UserPlus, Search, RefreshCw, AlertCircle, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { authAPI, userAPI, laboratoryAPI } from '@/services/api';
+import { Loader2, UserPlus, Search, RefreshCw, AlertCircle, Eye, EyeOff, Trash2, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import {
     AlertDialog,
@@ -29,6 +30,15 @@ interface User {
     role: string;
     isActive: boolean;
     createdAt: string;
+    assignedLocations?: string[];
+}
+
+interface Location {
+    _id: string;
+    name: string;
+    type: 'laboratory' | 'classroom';
+    building?: string;
+    floor?: string;
 }
 
 const UserManagement = () => {
@@ -37,9 +47,11 @@ const UserManagement = () => {
     const [isFetching, setIsFetching] = useState(false);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [users, setUsers] = useState<User[]>([]);
+    const [locations, setLocations] = useState<Location[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [userToDelete, setUserToDelete] = useState<string | null>(null);
+    const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -67,8 +79,20 @@ const UserManagement = () => {
         }
     };
 
+    const fetchLocations = async () => {
+        try {
+            const response: any = await laboratoryAPI.getAll();
+            if (response.data && Array.isArray(response.data)) {
+                setLocations(response.data);
+            }
+        } catch (error) {
+            console.error('Error fetching locations:', error);
+        }
+    };
+
     useEffect(() => {
         fetchUsers();
+        fetchLocations();
     }, []);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,6 +101,14 @@ const UserManagement = () => {
 
     const handleRoleChange = (value: string) => {
         setFormData({ ...formData, role: value });
+    };
+
+    const handleLocationToggle = (locationId: string) => {
+        setSelectedLocations(prev =>
+            prev.includes(locationId)
+                ? prev.filter(id => id !== locationId)
+                : [...prev, locationId]
+        );
     };
 
     const handleDeleteUser = async (id: string) => {
@@ -104,7 +136,12 @@ const UserManagement = () => {
         setIsLoading(true);
 
         try {
-            const response: any = await authAPI.createUser(formData);
+            const userData = {
+                ...formData,
+                assignedLocations: selectedLocations
+            };
+
+            const response: any = await authAPI.createUser(userData);
 
             if (response.status === 201 || response.success) {
                 toast({
@@ -119,6 +156,7 @@ const UserManagement = () => {
                     password: '',
                     role: 'staff'
                 });
+                setSelectedLocations([]);
                 setIsDialogOpen(false);
                 fetchUsers(); // Refresh list
             } else {
@@ -153,6 +191,11 @@ const UserManagement = () => {
         }
     };
 
+    const getLocationName = (locationId: string) => {
+        const location = locations.find(loc => loc._id === locationId);
+        return location ? location.name : locationId;
+    };
+
     const filteredUsers = users.filter(user =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -173,7 +216,7 @@ const UserManagement = () => {
                             Create User
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
+                    <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Create New User</DialogTitle>
                             <DialogDescription>
@@ -242,6 +285,48 @@ const UserManagement = () => {
                                 </Select>
                             </div>
 
+                            <div className="space-y-2">
+                                <Label>Assigned Locations (Optional)</Label>
+                                <p className="text-sm text-muted-foreground">Select classrooms and laboratories to assign to this user</p>
+                                <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                                    {locations.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground text-center py-4">No locations available</p>
+                                    ) : (
+                                        locations.map((location) => (
+                                            <div key={location._id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                                                <Checkbox
+                                                    id={`location-${location._id}`}
+                                                    checked={selectedLocations.includes(location._id)}
+                                                    onCheckedChange={() => handleLocationToggle(location._id)}
+                                                />
+                                                <label
+                                                    htmlFor={`location-${location._id}`}
+                                                    className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{location.name}</span>
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {location.type}
+                                                        </Badge>
+                                                        {location.building && (
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {location.building}
+                                                                {location.floor && `, Floor ${location.floor}`}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                {selectedLocations.length > 0 && (
+                                    <p className="text-sm text-muted-foreground">
+                                        {selectedLocations.length} location(s) selected
+                                    </p>
+                                )}
+                            </div>
+
                             <div className="flex justify-end pt-4 gap-2">
                                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                                 <Button type="submit" disabled={isLoading}>
@@ -291,6 +376,7 @@ const UserManagement = () => {
                                     <TableHead>Name</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Role</TableHead>
+                                    <TableHead>Assigned Locations</TableHead>
                                     <TableHead>Joined</TableHead>
                                     <TableHead className="text-right">Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
@@ -299,7 +385,7 @@ const UserManagement = () => {
                             <TableBody>
                                 {isFetching && users.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center">
+                                        <TableCell colSpan={7} className="h-24 text-center">
                                             <div className="flex justify-center items-center gap-2 text-muted-foreground">
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                 Loading users...
@@ -308,7 +394,7 @@ const UserManagement = () => {
                                     </TableRow>
                                 ) : filteredUsers.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                                             No users found.
                                         </TableCell>
                                     </TableRow>
@@ -319,6 +405,18 @@ const UserManagement = () => {
                                             <TableCell>{user.email}</TableCell>
                                             <TableCell>
                                                 {getRoleBadge(user.role)}
+                                            </TableCell>
+                                            <TableCell>
+                                                {user.assignedLocations && user.assignedLocations.length > 0 ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                                                        <span className="text-sm">
+                                                            {user.assignedLocations.length} location(s)
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-sm text-muted-foreground">None</span>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 {user.createdAt ? format(new Date(user.createdAt), 'MMM d, yyyy') : '-'}
@@ -350,6 +448,23 @@ const UserManagement = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the user account.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => userToDelete && handleDeleteUser(userToDelete)}>
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

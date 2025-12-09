@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        assignedLocations: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Laboratory'
+        }],
     },
     {
         timestamps: true,

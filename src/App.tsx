@@ -119,7 +119,7 @@ const App = () => (
                 <Route path="/register" element={<Register />} />
                 {/* General Dashboard */}
                 <Route path="/dashboard" element={
-                  <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.STAFF, UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN, UserRole.NON_TEACHING_STAFF]}>
                     <Layout>
                       <Dashboard />
                     </Layout>
@@ -127,19 +127,19 @@ const App = () => (
                 } />
 
                 {/* Digital Registers */}
-                <Route path="/registers" element={
-                  <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.FACULTY, UserRole.NON_TEACHING_STAFF, UserRole.LAB_TECHNICIAN]}>
+                <Route path="/digital-registers" element={
+                  <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.FACULTY, UserRole.NON_TEACHING_STAFF, UserRole.LAB_TECHNICIAN, UserRole.STAFF]}>
                     <Layout />
                   </ProtectedRoute>
                 }>
-                  <Route index element={<Navigate to="/registers/classrooms" replace />} />
+                  <Route index element={<DigitalRegistersHome />} />
                   <Route path="classrooms" element={<Classrooms />} />
-                  <Route path="labs" element={<Laboratories />} />
+                  <Route path="laboratories" element={<Laboratories />} />
                 </Route>
 
-                {/* Issue Management - Class Rep, Faculty, Lab Tech */}
+                {/* Issue Management - Class Rep, Faculty, Lab Tech, Staff */}
                 <Route path="/issues" element={
-                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
+                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN, UserRole.STAFF]}>
                     <Layout>
                       <IssueManagementLanding />
                     </Layout>
@@ -147,7 +147,7 @@ const App = () => (
                 } />
 
                 <Route path="/issues/report" element={
-                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
+                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN, UserRole.STAFF]}>
                     <Layout />
                   </ProtectedRoute>
                 }>
@@ -155,7 +155,7 @@ const App = () => (
                 </Route>
 
                 <Route path="/my-issues" element={
-                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN]}>
+                  <ProtectedRoute allowedRoles={[UserRole.CLASS_REP, UserRole.FACULTY, UserRole.LAB_TECHNICIAN, UserRole.STAFF]}>
                     <Layout>
                       <MyIssues />
                     </Layout>
