@@ -1,18 +1,26 @@
 import express from 'express';
 import Laboratory from '../models/Laboratory.js';
 import { protect } from '../middleware/auth.js';
+import { getLocationFilter } from '../middleware/locationAuth.js';
 
 const router = express.Router();
 
 // @route   GET /api/laboratories
 // @desc    Get all laboratories/classrooms with optional filters
-// @access  Public (anyone can view)
-router.get('/', async (req, res) => {
+// @access  Protected (filtered by user's assigned locations)
+router.get('/', protect, async (req, res) => {
     try {
-        const { type, department, search } = req.query;
+        const { type, department, search, includeAll } = req.query;
 
         // Build filter object
         const filter = { isActive: true };
+
+        // Apply location-based filtering (unless includeAll is specified)
+        if (includeAll !== 'true') {
+            const locationFilter = getLocationFilter(req.user);
+            Object.assign(filter, locationFilter);
+        }
+
         if (type) filter.type = type;
         if (department) filter.department = department;
         if (search) {

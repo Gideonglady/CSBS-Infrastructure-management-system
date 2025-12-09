@@ -1,319 +1,436 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, Package, MapPin, Send } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { EquipmentTransfer, EquipmentTransferData } from '@/types';
+import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { transferAPI, labSystemAPI, laboratoryAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { createApprovalRequest, notifyAdmin } from '@/utils/approvalWorkflow';
-import { getDefaultRouteForRole } from '@/utils/roleRedirect';
-import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { ArrowRightLeft, Loader2, Send, X, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 
-const EquipmentTransferPage = () => {
+interface Equipment {
+  _id: string;
+  sysID: string;
+  labName: string;
+  processor?: string;
+  ram?: string;
+  hdd?: string;
+  softwareAvailable?: string;
+}
+
+interface Location {
+  _id: string;
+  name: string;
+  type: 'laboratory' | 'classroom';
+}
+
+interface TransferRequest {
+  _id: string;
+  equipmentSnapshot: {
+    sysID: string;
+    processor?: string;
+    ram?: string;
+  };
+  sourceLocation: {
+    _id: string;
+    name: string;
+    type: string;
+  };
+  destinationLocation: {
+    _id: string;
+    name: string;
+    type: string;
+  };
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  requestedAt: string;
+  notes?: string;
+  rejectionReason?: string;
+}
+
+const EquipmentTransfer = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    equipmentName: '',
-    sourceType: '',
-    sourceId: '',
-    destinationType: '',
-    destinationId: '',
-    quantity: 1,
-    reason: ''
-  });
+  const { toast } = useToast();
 
-  const [locations] = useState([
-    { type: 'classroom', id: '1', name: 'Room 101' },
-    { type: 'classroom', id: '2', name: 'Room 205' },
-    { type: 'classroom', id: '3', name: 'Room 301' },
-    { type: 'laboratory', id: '4', name: 'Computer Lab 1' },
-    { type: 'laboratory', id: '5', name: 'Computer Lab 2' },
-    { type: 'laboratory', id: '6', name: 'Chemistry Lab A' },
-    { type: 'laboratory', id: '7', name: 'Physics Lab' }
-  ]);
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<string>('');
+  const [destinationLocation, setDestinationLocation] = useState<string>('');
+  const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [transferRequests, setTransferRequests] = useState<TransferRequest[]>([]);
+  const [allLocations, setAllLocations] = useState<Location[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const userLocations = user?.assignedLocations || [];
 
-    if (!user) {
-      toast.error('You must be logged in to submit a transfer request');
-      return;
+  useEffect(() => {
+    fetchAllLocations();
+    fetchTransferRequests();
+  }, []);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      fetchEquipment(selectedLocation);
+    } else {
+      setEquipment([]);
+      setSelectedEquipment('');
     }
+  }, [selectedLocation]);
 
-    if (!formData.equipmentName || !formData.sourceId || !formData.destinationId || !formData.reason) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    if (formData.sourceId === formData.destinationId) {
-      toast.error('Source and destination cannot be the same');
-      return;
-    }
-
-    // Create transfer record
-    const transfer: EquipmentTransfer = {
-      id: `TRF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      equipmentId: `EQ-${Date.now()}`,
-      equipmentName: formData.equipmentName,
-      sourceLocation: {
-        type: formData.sourceType as 'classroom' | 'laboratory',
-        id: formData.sourceId,
-        name: locations.find(l => l.id === formData.sourceId)?.name || ''
-      },
-      destinationLocation: {
-        type: formData.destinationType as 'classroom' | 'laboratory',
-        id: formData.destinationId,
-        name: locations.find(l => l.id === formData.destinationId)?.name || ''
-      },
-      quantity: formData.quantity,
-      reason: formData.reason,
-      requestedBy: user.id,
-      requestedByName: user.name,
-      requestedAt: new Date(),
-      status: 'pending'
-    };
-
-    // Save transfer to localStorage
+  const fetchAllLocations = async () => {
     try {
-      const stored = localStorage.getItem('dims-equipment-transfers');
-      const transfers = stored ? JSON.parse(stored) : [];
-      transfers.unshift(transfer);
-      localStorage.setItem('dims-equipment-transfers', JSON.stringify(transfers));
+      // Use includeAll=true to get all locations, not just assigned ones
+      const response: any = await laboratoryAPI.getAll({ includeAll: 'true' });
+      console.log('Locations API response:', response);
+
+      // Handle different response structures
+      let locations = [];
+      if (response?.data) {
+        locations = response.data;
+      } else if (Array.isArray(response)) {
+        locations = response;
+      }
+
+      console.log('Setting locations:', locations);
+      setAllLocations(locations);
     } catch (error) {
-      console.error('Error saving transfer:', error);
+      console.error('Error fetching locations:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch locations",
+        variant: "destructive",
+      });
     }
-
-    // Create approval request
-    const approvalData: EquipmentTransferData = {
-      transferId: transfer.id,
-      equipmentName: formData.equipmentName,
-      sourceLocation: transfer.sourceLocation.name,
-      destinationLocation: transfer.destinationLocation.name,
-      quantity: formData.quantity,
-      reason: formData.reason
-    };
-
-    const approvalRequest = createApprovalRequest(
-      'equipment_transfer',
-      approvalData,
-      user.id,
-      user.name,
-      user.role
-    );
-
-    notifyAdmin(approvalRequest);
-
-    toast.success('Transfer request submitted for admin approval');
-    
-    // Reset form
-    setFormData({
-      equipmentName: '',
-      sourceType: '',
-      sourceId: '',
-      destinationType: '',
-      destinationId: '',
-      quantity: 1,
-      reason: ''
-    });
-
-    // Navigate to dashboard or transfer history
-    setTimeout(() => {
-      navigate(getDefaultRouteForRole(user.role));
-    }, 1500);
   };
 
-  const sourceLocations = locations.filter(l => formData.sourceType === '' || l.type === formData.sourceType);
-  const destLocations = locations.filter(l => formData.destinationType === '' || l.type === formData.destinationType);
+  const fetchEquipment = async (locationId: string) => {
+    try {
+      setIsLoading(true);
+      const location = userLocations.find(loc => loc._id === locationId);
+      if (!location) return;
+
+      const response: any = await labSystemAPI.getByLabName(location.name);
+      if (response && response.data) {
+        setEquipment(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching equipment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch equipment list",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchTransferRequests = async () => {
+    try {
+      const response: any = await transferAPI.getAll();
+      if (response && response.data) {
+        setTransferRequests(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching transfer requests:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedEquipment || !selectedLocation || !destinationLocation) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedLocation === destinationLocation) {
+      toast({
+        title: "Error",
+        description: "Source and destination cannot be the same",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await transferAPI.createRequest({
+        equipmentId: selectedEquipment,
+        sourceLocation: selectedLocation,
+        destinationLocation: destinationLocation,
+        notes: notes || undefined,
+      });
+
+      toast({
+        title: "Success",
+        description: "Transfer request submitted successfully",
+      });
+
+      // Reset form
+      setSelectedLocation('');
+      setSelectedEquipment('');
+      setDestinationLocation('');
+      setNotes('');
+
+      // Refresh requests
+      fetchTransferRequests();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit transfer request",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelRequest = async (requestId: string) => {
+    try {
+      await transferAPI.cancel(requestId);
+      toast({
+        title: "Success",
+        description: "Transfer request cancelled",
+      });
+      fetchTransferRequests();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge className="bg-yellow-500"><Clock className="w-3 h-3 mr-1" />Pending</Badge>;
+      case 'approved':
+        return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Rejected</Badge>;
+      case 'cancelled':
+        return <Badge variant="outline">Cancelled</Badge>;
+      default:
+        return <Badge>{status}</Badge>;
+    }
+  };
+
+  const selectedEquipmentDetails = equipment.find(eq => eq._id === selectedEquipment);
 
   return (
-    <div className="container mx-auto px-6 py-8 max-w-4xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Equipment Transfer Request</h1>
-        <p className="text-gray-600">Request to transfer equipment between locations</p>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Equipment Transfer</h2>
+        <p className="text-muted-foreground">Request equipment transfers between locations</p>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5" />
-              Transfer Details
-            </CardTitle>
-            <CardDescription>
-              Fill in the details of the equipment you want to transfer
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Equipment Details */}
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="equipmentName">Equipment Name *</Label>
-                <Input
-                  id="equipmentName"
-                  value={formData.equipmentName}
-                  onChange={(e) => setFormData({ ...formData, equipmentName: e.target.value })}
-                  placeholder="e.g., Desktop Computer, Projector, Lab Equipment"
-                  required
-                  className="mt-1"
-                />
+      {/* Transfer Request Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowRightLeft className="w-5 h-5" />
+            New Transfer Request
+          </CardTitle>
+          <CardDescription>
+            Select equipment from your assigned locations to transfer
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Source Location */}
+              <div className="space-y-2">
+                <Label htmlFor="sourceLocation">Source Location *</Label>
+                <Select value={selectedLocation} onValueChange={setSelectedLocation}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select source location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {userLocations.map((location) => (
+                      <SelectItem key={location._id} value={location._id}>
+                        {location.name} ({location.type})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <div>
-                <Label htmlFor="quantity">Quantity *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="1"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                  required
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            {/* Source Location */}
-            <div className="space-y-4 pt-4 border-t">
-              <h3 className="font-semibold flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Source Location
-              </h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="sourceType">Location Type *</Label>
-                  <Select
-                    value={formData.sourceType}
-                    onValueChange={(value) => setFormData({ ...formData, sourceType: value, sourceId: '' })}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="classroom">Classroom</SelectItem>
-                      <SelectItem value="laboratory">Laboratory</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="sourceId">Location *</Label>
-                  <Select
-                    value={formData.sourceId}
-                    onValueChange={(value) => setFormData({ ...formData, sourceId: value })}
-                    disabled={!formData.sourceType}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sourceLocations.map(loc => (
-                        <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Equipment Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="equipment">Equipment *</Label>
+                <Select
+                  value={selectedEquipment}
+                  onValueChange={setSelectedEquipment}
+                  disabled={!selectedLocation || isLoading}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoading ? "Loading..." : "Select equipment"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {equipment.map((eq) => (
+                      <SelectItem key={eq._id} value={eq._id}>
+                        {eq.sysID} - {eq.processor || 'N/A'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            {/* Transfer Arrow */}
-            {formData.sourceId && formData.destinationId && (
-              <div className="flex justify-center py-2">
-                <ArrowRight className="w-8 h-8 text-blue-500" />
-              </div>
+            {/* Equipment Details Preview */}
+            {selectedEquipmentDetails && (
+              <Card className="bg-muted/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Equipment Details</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-1">
+                  <p><strong>System ID:</strong> {selectedEquipmentDetails.sysID}</p>
+                  <p><strong>Processor:</strong> {selectedEquipmentDetails.processor || 'N/A'}</p>
+                  <p><strong>RAM:</strong> {selectedEquipmentDetails.ram || 'N/A'}</p>
+                  <p><strong>HDD:</strong> {selectedEquipmentDetails.hdd || 'N/A'}</p>
+                  {selectedEquipmentDetails.softwareAvailable && (
+                    <p><strong>Software:</strong> {selectedEquipmentDetails.softwareAvailable}</p>
+                  )}
+                </CardContent>
+              </Card>
             )}
 
             {/* Destination Location */}
-            <div className="space-y-4 pt-4 border-t">
-              <h3 className="font-semibold flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                Destination Location
-              </h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="destinationType">Location Type *</Label>
-                  <Select
-                    value={formData.destinationType}
-                    onValueChange={(value) => setFormData({ ...formData, destinationType: value, destinationId: '' })}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="classroom">Classroom</SelectItem>
-                      <SelectItem value="laboratory">Laboratory</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="destinationId">Location *</Label>
-                  <Select
-                    value={formData.destinationId}
-                    onValueChange={(value) => setFormData({ ...formData, destinationId: value })}
-                    disabled={!formData.destinationType}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {destLocations.map(loc => (
-                        <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="destination">Destination Location *</Label>
+              <Select value={destinationLocation} onValueChange={setDestinationLocation}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select destination location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allLocations
+                    .filter(loc => loc._id !== selectedLocation)
+                    .map((location) => (
+                      <SelectItem key={location._id} value={location._id}>
+                        {location.name} ({location.type})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Reason */}
-            <div className="pt-4 border-t">
-              <Label htmlFor="reason">Reason for Transfer *</Label>
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (Optional)</Label>
               <Textarea
-                id="reason"
-                value={formData.reason}
-                onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                placeholder="Explain why this equipment needs to be transferred..."
-                rows={4}
-                required
-                className="mt-1"
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add any additional notes for the admin..."
+                rows={3}
               />
             </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => navigate(-1)}>
-                Cancel
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSelectedLocation('');
+                  setSelectedEquipment('');
+                  setDestinationLocation('');
+                  setNotes('');
+                }}
+              >
+                Clear
               </Button>
-              <Button type="submit">
-                <Send className="w-4 h-4 mr-2" />
-                Submit Transfer Request
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Submit Request
+                  </>
+                )}
               </Button>
             </div>
-          </CardContent>
-        </Card>
-      </form>
+          </form>
+        </CardContent>
+      </Card>
 
-      {/* Info Card */}
-      <Card className="mt-6 bg-blue-50 border-blue-200">
-        <CardContent className="p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Note:</strong> All equipment transfer requests require admin approval. 
-            You will be notified once your request is reviewed.
-          </p>
+      {/* Transfer Requests History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>My Transfer Requests</CardTitle>
+          <CardDescription>View and manage your transfer requests</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {transferRequests.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No transfer requests yet
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Equipment</TableHead>
+                    <TableHead>From</TableHead>
+                    <TableHead>To</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transferRequests.map((request) => (
+                    <TableRow key={request._id}>
+                      <TableCell className="font-medium">
+                        {request.equipmentSnapshot.sysID}
+                      </TableCell>
+                      <TableCell>{request.sourceLocation.name}</TableCell>
+                      <TableCell>{request.destinationLocation.name}</TableCell>
+                      <TableCell>
+                        {format(new Date(request.requestedAt), 'MMM d, yyyy')}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(request.status)}</TableCell>
+                      <TableCell className="text-right">
+                        {request.status === 'pending' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCancelRequest(request._id)}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Cancel
+                          </Button>
+                        )}
+                        {request.status === 'rejected' && request.rejectionReason && (
+                          <span className="text-xs text-muted-foreground">
+                            {request.rejectionReason}
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 };
 
-export default EquipmentTransferPage;
+export default EquipmentTransfer;

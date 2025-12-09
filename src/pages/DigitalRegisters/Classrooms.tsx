@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { laboratoryAPI } from '@/services/api';
 import { Laboratory } from '@/types/laboratory';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ClassroomSummary {
   _id: string;
@@ -14,6 +15,7 @@ interface ClassroomSummary {
 }
 
 const Classrooms = () => {
+  const { user } = useAuth();
   const [classrooms, setClassrooms] = useState<ClassroomSummary[]>([]);
   const [loading, setLoading] = useState(true);
 

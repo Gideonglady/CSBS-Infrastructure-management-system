@@ -126,11 +126,12 @@ export const issueAPI = {
 
 // Laboratory API endpoints
 export const laboratoryAPI = {
-    getAll: async (filters?: { type?: string; department?: string; search?: string }) => {
+    getAll: async (filters?: { type?: string; department?: string; search?: string; includeAll?: string }) => {
         const params = new URLSearchParams();
         if (filters?.type) params.append('type', filters.type);
         if (filters?.department) params.append('department', filters.department);
         if (filters?.search) params.append('search', filters.search);
+        if (filters?.includeAll) params.append('includeAll', filters.includeAll);
 
         const response = await api.get(`/api/laboratories?${params.toString()}`);
         return response;
@@ -238,6 +239,45 @@ export const uploadAPI = {
                 'Content-Type': 'multipart/form-data',
             },
         });
+        return response;
+    },
+};
+
+// Transfer Request API endpoints
+export const transferAPI = {
+    createRequest: async (data: {
+        equipmentId: string;
+        sourceLocation: string;
+        destinationLocation: string;
+        notes?: string;
+    }) => {
+        const response = await api.post('/api/transfer-requests', data);
+        return response;
+    },
+
+    getAll: async (status?: string) => {
+        const params = status ? { status } : {};
+        const response = await api.get('/api/transfer-requests', { params });
+        return response;
+    },
+
+    getById: async (id: string) => {
+        const response = await api.get(`/api/transfer-requests/${id}`);
+        return response;
+    },
+
+    approve: async (id: string, notes?: string) => {
+        const response = await api.put(`/api/transfer-requests/${id}/approve`, { notes });
+        return response;
+    },
+
+    reject: async (id: string, rejectionReason: string) => {
+        const response = await api.put(`/api/transfer-requests/${id}/reject`, { rejectionReason });
+        return response;
+    },
+
+    cancel: async (id: string) => {
+        const response = await api.delete(`/api/transfer-requests/${id}`);
         return response;
     },
 };

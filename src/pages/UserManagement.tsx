@@ -30,7 +30,14 @@ interface User {
     role: string;
     isActive: boolean;
     createdAt: string;
-    assignedLocations?: string[];
+    assignedLocations?: Array<{
+        _id: string;
+        name: string;
+        type: 'laboratory' | 'classroom';
+        building?: string;
+        floor?: string;
+        department?: string;
+    }>;
 }
 
 interface Location {
@@ -39,6 +46,7 @@ interface Location {
     type: 'laboratory' | 'classroom';
     building?: string;
     floor?: string;
+    department?: string;
 }
 
 const UserManagement = () => {

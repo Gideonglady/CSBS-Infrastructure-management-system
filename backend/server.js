@@ -9,6 +9,7 @@ import notificationRoutes from './routes/notifications.js';
 import uploadRoutes from './routes/upload.js';
 import usersRoutes from './routes/users.js';
 import labSystemsRoutes from './routes/labSystems.js';
+import transferRequestsRoutes from './routes/transferRequests.js';
 
 // Initialize Express app
 const app = express();
@@ -21,6 +22,13 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    console.log('Headers:', req.headers.authorization ? 'Has Auth Token' : 'No Auth Token');
+    next();
+});
+
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -30,6 +38,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/lab-systems', labSystemsRoutes);
+app.use('/api/transfer-requests', transferRequestsRoutes);
 
 
 // Health check route

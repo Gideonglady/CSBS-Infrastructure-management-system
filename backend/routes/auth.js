@@ -2,6 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Laboratory from '../models/Laboratory.js';
 import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
@@ -131,6 +132,21 @@ router.post(
                 });
             }
 
+            // Validate assigned locations if provided
+            if (assignedLocations && assignedLocations.length > 0) {
+                const validLocations = await Laboratory.find({
+                    _id: { $in: assignedLocations },
+                    isActive: true
+                });
+
+                if (validLocations.length !== assignedLocations.length) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'One or more assigned locations are invalid'
+                    });
+                }
+            }
+
             // Create new user
             const user = new User({
                 email,
@@ -144,18 +160,29 @@ router.post(
 
             await user.save();
 
+            // Fetch user with populated assigned locations
+            const populatedUser = await User.findById(user._id)
+                .select('-password')
+                .populate('assignedLocations', 'name type building floor department');
+
             res.status(201).json({
                 success: true,
                 message: 'User created successfully',
                 data: {
-                    user: user.toJSON(),
+                    user: populatedUser,
                 },
             });
         } catch (error) {
             console.error('Create user error:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
             res.status(500).json({
                 success: false,
-                message: 'Server error during user creation'
+                message: 'Server error during user creation',
+                error: error.message
             });
         }
     }
@@ -212,6 +239,9 @@ router.post(
             // Generate token
             const token = generateToken(user._id);
 
+            // Populate assigned locations
+            await user.populate('assignedLocations', 'name type building floor department');
+
             res.json({
                 success: true,
                 message: 'Login successful',
@@ -235,10 +265,15 @@ router.post(
 // @access  Private
 router.get('/me', authMiddleware, async (req, res) => {
     try {
+        // Populate assigned locations
+        const user = await User.findById(req.user._id)
+            .select('-password')
+            .populate('assignedLocations', 'name type building floor department');
+
         res.json({
             success: true,
             data: {
-                user: req.user,
+                user: user,
             },
         });
     } catch (error) {

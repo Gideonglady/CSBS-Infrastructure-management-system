@@ -20,6 +20,14 @@ export interface User {
   updatedAt: Date;
   isActive: boolean;
   mustChangePassword?: boolean;
+  assignedLocations?: Array<{
+    _id: string;
+    name: string;
+    type: 'laboratory' | 'classroom';
+    building?: string;
+    floor?: string;
+    department?: string;
+  }>;
 }
 
 export interface AuthState {

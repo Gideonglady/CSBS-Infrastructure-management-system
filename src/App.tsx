@@ -30,6 +30,7 @@ import MyIssuesTest from "./pages/MyIssues-test";
 import MyIssuesSimple from "./pages/MyIssues-simple";
 import PendingApprovals from "./pages/PendingApprovals";
 import EquipmentTransfer from "./pages/EquipmentTransfer";
+import TransferApproval from "./pages/Admin/TransferApproval";
 import NotFound from "./pages/NotFound";
 import { UserRole } from "@/types/auth";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -185,11 +186,12 @@ const App = () => (
                   <Route path="issues" element={<AdminIssueManagement />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="approvals" element={<PendingApprovals />} />
+                  <Route path="transfer-approvals" element={<TransferApproval />} />
                 </Route>
 
                 {/* Equipment Transfer */}
                 <Route path="/equipment-transfer" element={
-                  <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.LAB_TECHNICIAN, UserRole.NON_TEACHING_STAFF]}>
+                  <ProtectedRoute allowedRoles={[UserRole.STAFF, UserRole.LAB_TECHNICIAN]}>
                     <Layout />
                   </ProtectedRoute>
                 }>

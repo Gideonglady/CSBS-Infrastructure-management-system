@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { labSystemAPI } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LabSummary {
   labName: string;
@@ -27,6 +28,7 @@ interface LabSystem {
 }
 
 const Laboratories = () => {
+  const { user } = useAuth();
   const [labs, setLabs] = useState<LabSummary[]>([]);
   const [filteredLabs, setFilteredLabs] = useState<LabSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,7 +76,7 @@ const Laboratories = () => {
       setDetailsLoading(true);
       setSelectedLab(labName);
       setIsDialogOpen(true);
-      
+
       const response: any = await labSystemAPI.getByLabName(labName);
       if (response && response.success) {
         setLabSystems(response.data);
@@ -237,7 +239,7 @@ const Laboratories = () => {
                     className="pl-10"
                   />
                 </div>
-                
+
                 <Select
                   value={dialogFilter}
                   onValueChange={setDialogFilter}
@@ -278,11 +280,11 @@ const Laboratories = () => {
                   {labSystems
                     .filter(system => {
                       // Text Search
-                      const matchesSearch = !dialogSearchTerm || 
+                      const matchesSearch = !dialogSearchTerm ||
                         system.sysID.toLowerCase().includes(dialogSearchTerm.toLowerCase()) ||
                         (system.processor && system.processor.toLowerCase().includes(dialogSearchTerm.toLowerCase())) ||
                         (system.softwareAvailable && system.softwareAvailable.toLowerCase().includes(dialogSearchTerm.toLowerCase()));
-                      
+
                       // Dropdown Filter
                       let matchesFilter = true;
                       if (dialogFilter && dialogFilter !== 'all') {
@@ -297,19 +299,19 @@ const Laboratories = () => {
                       return matchesSearch && matchesFilter;
                     })
                     .map((system, index) => (
-                    <TableRow key={system._id}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className="font-medium">{system.sysID}</TableCell>
-                      {labSystems.some(s => s.processor) && <TableCell>{system.processor || '-'}</TableCell>}
-                      {labSystems.some(s => s.ram) && <TableCell>{system.ram || '-'}</TableCell>}
-                      {labSystems.some(s => s.hdd) && <TableCell>{system.hdd || '-'}</TableCell>}
-                      {labSystems.some(s => s.softwareAvailable) && (
-                        <TableCell className="whitespace-pre-wrap" title={system.softwareAvailable}>
-                          {system.softwareAvailable || '-'}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
+                      <TableRow key={system._id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">{system.sysID}</TableCell>
+                        {labSystems.some(s => s.processor) && <TableCell>{system.processor || '-'}</TableCell>}
+                        {labSystems.some(s => s.ram) && <TableCell>{system.ram || '-'}</TableCell>}
+                        {labSystems.some(s => s.hdd) && <TableCell>{system.hdd || '-'}</TableCell>}
+                        {labSystems.some(s => s.softwareAvailable) && (
+                          <TableCell className="whitespace-pre-wrap" title={system.softwareAvailable}>
+                            {system.softwareAvailable || '-'}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
             </div>

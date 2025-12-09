@@ -37,6 +37,31 @@ const labSystemSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        transferHistory: [{
+            fromLocation: {
+                type: String,
+                trim: true,
+            },
+            toLocation: {
+                type: String,
+                trim: true,
+            },
+            transferDate: {
+                type: Date,
+                default: Date.now,
+            },
+            transferredBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+            },
+            approvedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User',
+            },
+        }],
+        lastTransferDate: {
+            type: Date,
+        },
     },
     {
         timestamps: true,

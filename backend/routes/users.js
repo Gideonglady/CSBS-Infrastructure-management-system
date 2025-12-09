@@ -17,8 +17,11 @@ router.get('/', authMiddleware, async (req, res) => {
             });
         }
 
-        // Fetch users, excluding password
-        const users = await User.find().select('-password').sort({ createdAt: -1 });
+        // Fetch users, excluding password, and populate assigned locations
+        const users = await User.find()
+            .select('-password')
+            .populate('assignedLocations', 'name type building floor department')
+            .sort({ createdAt: -1 });
 
         res.json({
             success: true,
