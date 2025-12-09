@@ -6,15 +6,17 @@ export const getDefaultRouteForRole = (role?: UserRole): string => {
       return '/admin';
     case UserRole.FACULTY:
     case UserRole.NON_TEACHING_STAFF:
-      return '/registers';
+      return '/digital-registers';
     case UserRole.LAB_TECHNICIAN:
       return '/issues';
     case UserRole.LAB_INCHARGE:
-      return '/registers/labs';
+      return '/digital-registers/laboratories';
     case UserRole.CLASS_REP:
       return '/issues';
+    case UserRole.STAFF:
+      return '/dashboard';
     default:
-      return '/issues';
+      return '/dashboard';
   }
 };
 

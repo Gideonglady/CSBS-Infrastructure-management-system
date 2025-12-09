@@ -78,6 +78,14 @@ export const userAPI = {
     deleteUser: async (id: string) => {
         const response = await api.delete(`/api/users/${id}`);
         return response;
+    },
+    updateUserLocations: async (userId: string, locationIds: string[]) => {
+        const response = await api.put(`/api/users/${userId}/locations`, { assignedLocations: locationIds });
+        return response;
+    },
+    getUserLocations: async () => {
+        const response = await api.get('/api/users/me/locations');
+        return response;
     }
 };
 

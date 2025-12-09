@@ -5,25 +5,44 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { laboratoryAPI } from '@/services/api';
+import { laboratoryAPI, userAPI } from '@/services/api';
 import { Laboratory } from '@/types/laboratory';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Classrooms = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [classrooms, setClassrooms] = useState<Laboratory[]>([]);
+  const [assignedLocationIds, setAssignedLocationIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     fetchClassrooms();
-  }, []);
+    if (!isAdmin) {
+      fetchAssignedLocations();
+    }
+  }, [isAdmin]);
+
+  const fetchAssignedLocations = async () => {
+    try {
+      const response = await userAPI.getUserLocations();
+      if (response.data) {
+        const locationIds = response.data.map((loc: any) => loc._id);
+        setAssignedLocationIds(locationIds);
+      }
+    } catch (error: any) {
+      console.error('Error fetching assigned locations:', error);
+    }
+  };
 
   const fetchClassrooms = async () => {
     try {
       setLoading(true);
       const response = await laboratoryAPI.getAll({ type: 'classroom' });
-      if (response.success) {
+      if (response.data) {
         setClassrooms(response.data);
       }
     } catch (error: any) {
@@ -38,7 +57,15 @@ const Classrooms = () => {
     }
   };
 
-  const filteredClassrooms = classrooms.filter(classroom => {
+  // Filter by assigned locations for non-admin users
+  let accessibleClassrooms = classrooms;
+  if (!isAdmin && assignedLocationIds.length > 0) {
+    accessibleClassrooms = classrooms.filter(classroom =>
+      assignedLocationIds.includes(classroom._id)
+    );
+  }
+
+  const filteredClassrooms = accessibleClassrooms.filter(classroom => {
     const matchesSearch = classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
@@ -82,9 +109,9 @@ const Classrooms = () => {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{classrooms.length}</div>
+            <div className="text-2xl font-bold">{accessibleClassrooms.length}</div>
             <p className="text-xs text-muted-foreground">
-              CSBS Department
+              {isAdmin ? 'CSBS Department' : 'Assigned to you'}
             </p>
           </CardContent>
         </Card>
@@ -95,7 +122,7 @@ const Classrooms = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {classrooms.filter(c => c.additionalEquipment.length > 0).length}
+              {accessibleClassrooms.filter(c => c.additionalEquipment.length > 0).length}
             </div>
             <p className="text-xs text-muted-foreground">
               With projectors and equipment

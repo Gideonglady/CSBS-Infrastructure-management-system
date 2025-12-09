@@ -6,25 +6,44 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { laboratoryAPI } from '@/services/api';
+import { laboratoryAPI, userAPI } from '@/services/api';
 import { Laboratory } from '@/types/laboratory';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Laboratories = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
+  const [assignedLocationIds, setAssignedLocationIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     fetchLaboratories();
-  }, []);
+    if (!isAdmin) {
+      fetchAssignedLocations();
+    }
+  }, [isAdmin]);
+
+  const fetchAssignedLocations = async () => {
+    try {
+      const response = await userAPI.getUserLocations();
+      if (response.data) {
+        const locationIds = response.data.map((loc: any) => loc._id);
+        setAssignedLocationIds(locationIds);
+      }
+    } catch (error: any) {
+      console.error('Error fetching assigned locations:', error);
+    }
+  };
 
   const fetchLaboratories = async () => {
     try {
       setLoading(true);
       const response = await laboratoryAPI.getAll({ type: 'laboratory' });
-      if (response.success) {
+      if (response.data) {
         setLaboratories(response.data);
       }
     } catch (error: any) {
@@ -39,13 +58,21 @@ const Laboratories = () => {
     }
   };
 
-  const filteredLaboratories = laboratories.filter(lab => {
+  // Filter by assigned locations for non-admin users
+  let accessibleLaboratories = laboratories;
+  if (!isAdmin && assignedLocationIds.length > 0) {
+    accessibleLaboratories = laboratories.filter(lab =>
+      assignedLocationIds.includes(lab._id)
+    );
+  }
+
+  const filteredLaboratories = accessibleLaboratories.filter(lab => {
     const matchesSearch = lab.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lab.software.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesSearch;
   });
 
-  const totalSystems = laboratories.reduce((sum, lab) => sum + lab.numberOfSystems, 0);
+  const totalSystems = accessibleLaboratories.reduce((sum, lab) => sum + lab.numberOfSystems, 0);
 
   if (loading) {
     return (
@@ -86,9 +113,9 @@ const Laboratories = () => {
             <Microscope className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{laboratories.length}</div>
+            <div className="text-2xl font-bold">{accessibleLaboratories.length}</div>
             <p className="text-xs text-muted-foreground">
-              CSBS Department
+              {isAdmin ? 'CSBS Department' : 'Assigned to you'}
             </p>
           </CardContent>
         </Card>
@@ -113,7 +140,7 @@ const Laboratories = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {laboratories.length > 0 ? Math.round(totalSystems / laboratories.length) : 0}
+              {accessibleLaboratories.length > 0 ? Math.round(totalSystems / accessibleLaboratories.length) : 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Per laboratory

@@ -54,9 +54,9 @@ const Sidebar: React.FC = () => {
     // Admin Dashboard - Only for admins
     {
       label: 'Dashboard',
-      href: '/admin',
+      href: user?.role === 'admin' ? '/admin' : '/dashboard',
       icon: LayoutDashboard,
-      roles: ['admin']
+      roles: ['admin', 'staff']
     },
     {
       label: 'User Management',
@@ -64,23 +64,23 @@ const Sidebar: React.FC = () => {
       icon: Users,
       roles: ['admin']
     },
-    // Digital Registers - Admin, Faculty, Non-teaching Staff, Lab Technician
+    // Digital Registers - Admin, Faculty, Non-teaching Staff, Lab Technician, Staff
     {
       label: 'Digital Registers',
-      href: '/registers',
+      href: '/digital-registers',
       icon: Building2,
-      roles: ['admin', 'faculty', 'non_teaching_staff', 'lab_technician'],
+      roles: ['admin', 'faculty', 'non_teaching_staff', 'lab_technician', 'staff'],
       children: [
-        { label: 'Classrooms', href: '/registers/classrooms', icon: BookOpen },
-        { label: 'Laboratories', href: '/registers/labs', icon: Microscope }
+        { label: 'Classrooms', href: '/digital-registers/classrooms', icon: BookOpen },
+        { label: 'Laboratories', href: '/digital-registers/laboratories', icon: Microscope }
       ]
     },
-    // Issue Management - Class Rep, Faculty, Lab Tech see reporting, Admin sees dashboard
+    // Issue Management - Class Rep, Faculty, Lab Tech, Staff see reporting, Admin sees dashboard
     {
       label: 'Issue Management',
       href: user?.role === 'admin' ? '/admin/issues' : '/issues',
       icon: AlertTriangle,
-      roles: ['admin', 'class_rep', 'faculty', 'lab_technician'],
+      roles: ['admin', 'class_rep', 'faculty', 'lab_technician', 'staff'],
       children: user?.role === 'admin' ? [] : [
         { label: 'Report Issue', href: '/issues/report', icon: FileText },
         { label: 'My Issues', href: '/my-issues', icon: AlertTriangle }
@@ -91,7 +91,7 @@ const Sidebar: React.FC = () => {
       label: 'Notifications',
       href: '/notifications',
       icon: Bell,
-      roles: ['admin', 'faculty', 'non_teaching_staff', 'class_rep', 'lab_technician']
+      roles: ['admin', 'faculty', 'non_teaching_staff', 'class_rep', 'lab_technician', 'staff']
     }
   ];
 
