@@ -190,6 +190,29 @@ export const notificationAPI = {
     },
 };
 
+// Lab Systems API endpoints
+export const labSystemAPI = {
+    getAll: async (params?: { search?: string; labName?: string; page?: number; limit?: number }) => {
+        const response = await api.get('/api/lab-systems', { params });
+        return response;
+    },
+
+    getLabsSummary: async () => {
+        const response = await api.get('/api/lab-systems/labs');
+        return response;
+    },
+
+    getById: async (id: string) => {
+        const response = await api.get(`/api/lab-systems/${id}`);
+        return response;
+    },
+
+    getByLabName: async (labName: string) => {
+        const response = await api.get(`/api/lab-systems/lab/${encodeURIComponent(labName)}`);
+        return response;
+    },
+};
+
 // Upload API endpoints
 export const uploadAPI = {
     uploadImages: async (files: File[]) => {

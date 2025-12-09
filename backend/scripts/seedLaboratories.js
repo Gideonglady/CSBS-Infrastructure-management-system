@@ -67,16 +67,21 @@ const parseExcelData = () => {
 
 // Create classroom data
 const createClassroomData = () => {
-    const classrooms = ['ITT1', 'ITT2', 'ITT3', 'ITT4'];
+    const classrooms = [
+        { name: 'ITT1', numberOfDesks: 38 },
+        { name: 'ITT2', numberOfDesks: 38 },
+        { name: 'ITT3', numberOfDesks: 38 },
+        { name: 'ITT4', numberOfDesks: 34 },
+    ];
 
-    return classrooms.map((name, index) => ({
-        name: name,
+    return classrooms.map((classroom, index) => ({
+        name: classroom.name,
         type: 'classroom',
         serialNumber: 100 + index + 1, // Start from 101 to avoid conflicts
-        numberOfSystems: 0,
+        numberOfSystems: classroom.numberOfDesks, // Using numberOfSystems field to store desk count
         systemConfiguration: '',
         software: [],
-        additionalEquipment: ['Projector'],
+        additionalEquipment: ['4 Windows', 'Projector', 'Big Desk'],
         department: 'CSBS',
         building: 'Main Building',
         floor: '1st Floor',

@@ -8,6 +8,7 @@ import laboratoryRoutes from './routes/laboratories.js';
 import notificationRoutes from './routes/notifications.js';
 import uploadRoutes from './routes/upload.js';
 import usersRoutes from './routes/users.js';
+import labSystemsRoutes from './routes/labSystems.js';
 
 // Initialize Express app
 const app = express();
@@ -28,6 +29,7 @@ app.use('/api/laboratories', laboratoryRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/lab-systems', labSystemsRoutes);
 
 
 // Health check route

@@ -1,131 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Building2, Users, Wifi, Projector, Computer } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Building2, Users, Projector } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { laboratoryAPI, userAPI } from '@/services/api';
+import { laboratoryAPI } from '@/services/api';
 import { Laboratory } from '@/types/laboratory';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+
+interface ClassroomSummary {
+  _id: string;
+  serialNumber: number;
+  name: string;
+  numberOfDesks: number;
+  equipment: string;
+}
 
 const Classrooms = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [classrooms, setClassrooms] = useState<Laboratory[]>([]);
-  const [assignedLocationIds, setAssignedLocationIds] = useState<string[]>([]);
+  const [classrooms, setClassrooms] = useState<ClassroomSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     fetchClassrooms();
-    if (!isAdmin) {
-      fetchAssignedLocations();
-    }
-  }, [isAdmin]);
-
-  const fetchAssignedLocations = async () => {
-    try {
-      const response = await userAPI.getUserLocations();
-      if (response.data) {
-        const locationIds = response.data.map((loc: any) => loc._id);
-        setAssignedLocationIds(locationIds);
-      }
-    } catch (error: any) {
-      console.error('Error fetching assigned locations:', error);
-    }
-  };
+  }, []);
 
   const fetchClassrooms = async () => {
     try {
       setLoading(true);
-      const response = await laboratoryAPI.getAll({ type: 'classroom' });
-      if (response.data) {
-        setClassrooms(response.data);
+      const response: any = await laboratoryAPI.getAll({ type: 'classroom' });
+      if (response && response.data) {
+        // Transform data to match the expected format
+        const transformedData = response.data.map((classroom: Laboratory) => ({
+          _id: classroom._id,
+          serialNumber: classroom.serialNumber,
+          name: classroom.name,
+          numberOfDesks: classroom.numberOfSystems, // numberOfSystems stores desk count for classrooms
+          equipment: classroom.additionalEquipment.join(', '),
+        }));
+        setClassrooms(transformedData);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching classrooms:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load classrooms',
-        variant: 'destructive',
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter by assigned locations for non-admin users
-  let accessibleClassrooms = classrooms;
-  if (!isAdmin && assignedLocationIds.length > 0) {
-    accessibleClassrooms = classrooms.filter(classroom =>
-      assignedLocationIds.includes(classroom._id)
-    );
-  }
-
-  const filteredClassrooms = accessibleClassrooms.filter(classroom => {
-    const matchesSearch = classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading classrooms...</div>
-      </div>
-    );
-  }
+  const totalDesks = classrooms.reduce((sum, classroom) => sum + classroom.numberOfDesks, 0);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Classroom Registers</h1>
-          <p className="text-gray-600">CSBS Department - Classroom Infrastructure</p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search classrooms..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Classroom Registers</h1>
+        <p className="text-gray-600">CSBS Department - Classroom Infrastructure</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Classrooms</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{accessibleClassrooms.length}</div>
+            <div className="text-2xl font-bold">{classrooms.length}</div>
             <p className="text-xs text-muted-foreground">
-              {isAdmin ? 'CSBS Department' : 'Assigned to you'}
+              Active classrooms
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Equipped Classrooms</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Desks</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {totalDesks}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Total desks available
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Desks/Classroom</CardTitle>
             <Projector className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {accessibleClassrooms.filter(c => c.additionalEquipment.length > 0).length}
+            <div className="text-2xl font-bold">
+              {classrooms.length > 0 ? Math.round(totalDesks / classrooms.length) : 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              With projectors and equipment
+              Per classroom
             </p>
           </CardContent>
         </Card>
@@ -140,44 +106,37 @@ const Classrooms = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Classroom Name</TableHead>
-                <TableHead>Building</TableHead>
-                <TableHead>Floor</TableHead>
-                <TableHead>Equipment</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClassrooms.map((classroom) => (
-                <TableRow key={classroom._id}>
-                  <TableCell className="font-medium">
-                    <div className="font-semibold">{classroom.name}</div>
-                  </TableCell>
-                  <TableCell>{classroom.building}</TableCell>
-                  <TableCell>{classroom.floor}</TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {classroom.additionalEquipment.map((equipment, index) => (
-                        <Badge key={index} variant="outline" className="mr-1 mb-1 bg-blue-50">
-                          <Projector className="w-3 h-3 mr-1" />
-                          {equipment}
-                        </Badge>
-                      ))}
-                      {classroom.additionalEquipment.length === 0 && (
-                        <span className="text-sm text-gray-500">No equipment</span>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredClassrooms.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No classrooms found
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading classrooms...</p>
             </div>
+          ) : classrooms.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No classrooms found</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16">S.No</TableHead>
+                  <TableHead>Class Name</TableHead>
+                  <TableHead className="text-center">No. of Desk</TableHead>
+                  <TableHead>Other Equipment</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {classrooms.map((classroom, index) => (
+                  <TableRow key={classroom._id}>
+                    <TableCell className="font-medium">{classroom.serialNumber}</TableCell>
+                    <TableCell className="font-medium">{classroom.name}</TableCell>
+                    <TableCell className="text-center">{classroom.numberOfDesks}</TableCell>
+                    <TableCell className="max-w-md truncate" title={classroom.equipment}>
+                      {classroom.equipment || 'N/A'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

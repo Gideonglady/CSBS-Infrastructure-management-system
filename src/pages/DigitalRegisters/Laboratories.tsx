@@ -1,108 +1,99 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Microscope, Users, Wrench, Shield, TestTube, Computer } from 'lucide-react';
+import { Search, Eye, Microscope, Computer, TestTube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { laboratoryAPI, userAPI } from '@/services/api';
-import { Laboratory } from '@/types/laboratory';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { labSystemAPI } from '@/services/api';
+
+interface LabSummary {
+  labName: string;
+  systemCount: number;
+  equipment: string;
+}
+
+interface LabSystem {
+  _id: string;
+  sno: number;
+  labName: string;
+  sysID: string;
+  processor: string;
+  ram: string;
+  hdd: string;
+  softwareAvailable: string;
+  equipment: string;
+}
 
 const Laboratories = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [laboratories, setLaboratories] = useState<Laboratory[]>([]);
-  const [assignedLocationIds, setAssignedLocationIds] = useState<string[]>([]);
+  const [labs, setLabs] = useState<LabSummary[]>([]);
+  const [filteredLabs, setFilteredLabs] = useState<LabSummary[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLab, setSelectedLab] = useState<string | null>(null);
+  const [labSystems, setLabSystems] = useState<LabSystem[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [dialogSearchTerm, setDialogSearchTerm] = useState('');
+  const [dialogFilter, setDialogFilter] = useState('all');
 
   useEffect(() => {
-    fetchLaboratories();
-    if (!isAdmin) {
-      fetchAssignedLocations();
-    }
-  }, [isAdmin]);
+    fetchLabs();
+  }, []);
 
-  const fetchAssignedLocations = async () => {
-    try {
-      const response = await userAPI.getUserLocations();
-      if (response.data) {
-        const locationIds = response.data.map((loc: any) => loc._id);
-        setAssignedLocationIds(locationIds);
-      }
-    } catch (error: any) {
-      console.error('Error fetching assigned locations:', error);
+  useEffect(() => {
+    // Filter labs based on search term
+    if (searchTerm) {
+      const filtered = labs.filter(lab =>
+        lab.labName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredLabs(filtered);
+    } else {
+      setFilteredLabs(labs);
     }
-  };
+  }, [searchTerm, labs]);
 
-  const fetchLaboratories = async () => {
+  const fetchLabs = async () => {
     try {
       setLoading(true);
-      const response = await laboratoryAPI.getAll({ type: 'laboratory' });
-      if (response.data) {
-        setLaboratories(response.data);
+      const response: any = await labSystemAPI.getLabsSummary();
+      if (response && response.success) {
+        setLabs(response.data);
+        setFilteredLabs(response.data);
       }
-    } catch (error: any) {
-      console.error('Error fetching laboratories:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load laboratories',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      console.error('Error fetching labs:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter by assigned locations for non-admin users
-  let accessibleLaboratories = laboratories;
-  if (!isAdmin && assignedLocationIds.length > 0) {
-    accessibleLaboratories = laboratories.filter(lab =>
-      assignedLocationIds.includes(lab._id)
-    );
-  }
+  const handleViewDetails = async (labName: string) => {
+    try {
+      setDetailsLoading(true);
+      setSelectedLab(labName);
+      setIsDialogOpen(true);
+      
+      const response: any = await labSystemAPI.getByLabName(labName);
+      if (response && response.success) {
+        setLabSystems(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching lab systems:', error);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
-  const filteredLaboratories = accessibleLaboratories.filter(lab => {
-    const matchesSearch = lab.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lab.software.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesSearch;
-  });
-
-  const totalSystems = accessibleLaboratories.reduce((sum, lab) => sum + lab.numberOfSystems, 0);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-lg">Loading laboratories...</div>
-      </div>
-    );
-  }
+  const totalSystems = labs.reduce((sum, lab) => sum + lab.systemCount, 0);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Laboratory Registers</h1>
-          <p className="text-gray-600">CSBS Department - Laboratory Infrastructure</p>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search laboratories, software..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Laboratory Registers</h1>
+        <p className="text-gray-600">CSBS Department - Laboratory Infrastructure</p>
       </div>
 
       {/* Stats Cards */}
@@ -113,9 +104,9 @@ const Laboratories = () => {
             <Microscope className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{accessibleLaboratories.length}</div>
+            <div className="text-2xl font-bold">{labs.length}</div>
             <p className="text-xs text-muted-foreground">
-              {isAdmin ? 'CSBS Department' : 'Assigned to you'}
+              Active laboratories
             </p>
           </CardContent>
         </Card>
@@ -140,7 +131,7 @@ const Laboratories = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {accessibleLaboratories.length > 0 ? Math.round(totalSystems / accessibleLaboratories.length) : 0}
+              {labs.length > 0 ? Math.round(totalSystems / labs.length) : 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Per laboratory
@@ -149,7 +140,24 @@ const Laboratories = () => {
         </Card>
       </div>
 
-      {/* Laboratories Table */}
+      {/* Search */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center space-x-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search by lab name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Labs Table */}
       <Card>
         <CardHeader>
           <CardTitle>Laboratory Details</CardTitle>
@@ -158,71 +166,156 @@ const Laboratories = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Lab Name</TableHead>
-                <TableHead>Systems</TableHead>
-                <TableHead>Configuration</TableHead>
-                <TableHead>Software</TableHead>
-                <TableHead>Equipment</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLaboratories.map((lab) => (
-                <TableRow key={lab._id}>
-                  <TableCell className="font-medium">
-                    <div>
-                      <div className="font-semibold">{lab.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {lab.building} - {lab.floor}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-blue-50">
-                      {lab.numberOfSystems} systems
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs">
-                    <div className="text-sm text-gray-600 truncate" title={lab.systemConfiguration}>
-                      {lab.systemConfiguration || 'N/A'}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {lab.software.slice(0, 3).map((software, index) => (
-                        <Badge key={index} variant="outline" className="mr-1 mb-1">
-                          {software}
-                        </Badge>
-                      ))}
-                      {lab.software.length > 3 && (
-                        <span className="text-xs text-gray-500">
-                          +{lab.software.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {lab.additionalEquipment.map((equipment, index) => (
-                        <Badge key={index} variant="outline" className="mr-1 mb-1 bg-green-50">
-                          {equipment}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          {filteredLaboratories.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No laboratories found
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading laboratories...</p>
             </div>
+          ) : filteredLabs.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No laboratories found</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16">S.No</TableHead>
+                  <TableHead>Lab Name</TableHead>
+                  <TableHead className="text-center">No. of Systems</TableHead>
+                  <TableHead>Other Equipment</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredLabs.map((lab, index) => (
+                  <TableRow key={lab.labName}>
+                    <TableCell className="font-medium">{index + 1}</TableCell>
+                    <TableCell className="font-medium">{lab.labName}</TableCell>
+                    <TableCell className="text-center">{lab.systemCount}</TableCell>
+                    <TableCell className="max-w-md truncate" title={lab.equipment}>{lab.equipment || 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDetails(lab.labName)}
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
+
+      {/* Lab Details Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedLab} - System Details</DialogTitle>
+            <DialogDescription>
+              Complete information about all systems in this laboratory
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailsLoading ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">Loading system details...</p>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {/* Dialog Search and Filter */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search systems..."
+                    value={dialogSearchTerm}
+                    onChange={(e) => setDialogSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                <Select
+                  value={dialogFilter}
+                  onValueChange={setDialogFilter}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Systems</SelectItem>
+                    {/* Dynamic Processor Options */}
+                    {Array.from(new Set(labSystems.map(s => s.processor).filter(Boolean))).map(proc => (
+                      <SelectItem key={`proc-${proc}`} value={`processor:${proc}`}>
+                        Processor: {proc}
+                      </SelectItem>
+                    ))}
+                    {/* Dynamic RAM Options */}
+                    {Array.from(new Set(labSystems.map(s => s.ram).filter(Boolean))).map(ram => (
+                      <SelectItem key={`ram-${ram}`} value={`ram:${ram}`}>
+                        RAM: {ram}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>S.No</TableHead>
+                    <TableHead>System ID</TableHead>
+                    {labSystems.some(s => s.processor) && <TableHead>Processor</TableHead>}
+                    {labSystems.some(s => s.ram) && <TableHead>RAM</TableHead>}
+                    {labSystems.some(s => s.hdd) && <TableHead>HDD</TableHead>}
+                    {labSystems.some(s => s.softwareAvailable) && <TableHead>Software</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {labSystems
+                    .filter(system => {
+                      // Text Search
+                      const matchesSearch = !dialogSearchTerm || 
+                        system.sysID.toLowerCase().includes(dialogSearchTerm.toLowerCase()) ||
+                        (system.processor && system.processor.toLowerCase().includes(dialogSearchTerm.toLowerCase())) ||
+                        (system.softwareAvailable && system.softwareAvailable.toLowerCase().includes(dialogSearchTerm.toLowerCase()));
+                      
+                      // Dropdown Filter
+                      let matchesFilter = true;
+                      if (dialogFilter && dialogFilter !== 'all') {
+                        const [type, value] = dialogFilter.split(':');
+                        if (type === 'processor') {
+                          matchesFilter = system.processor === value;
+                        } else if (type === 'ram') {
+                          matchesFilter = system.ram === value;
+                        }
+                      }
+
+                      return matchesSearch && matchesFilter;
+                    })
+                    .map((system, index) => (
+                    <TableRow key={system._id}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell className="font-medium">{system.sysID}</TableCell>
+                      {labSystems.some(s => s.processor) && <TableCell>{system.processor || '-'}</TableCell>}
+                      {labSystems.some(s => s.ram) && <TableCell>{system.ram || '-'}</TableCell>}
+                      {labSystems.some(s => s.hdd) && <TableCell>{system.hdd || '-'}</TableCell>}
+                      {labSystems.some(s => s.softwareAvailable) && (
+                        <TableCell className="whitespace-pre-wrap" title={system.softwareAvailable}>
+                          {system.softwareAvailable || '-'}
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
