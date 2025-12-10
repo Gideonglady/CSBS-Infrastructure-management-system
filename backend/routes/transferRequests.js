@@ -1,3 +1,4 @@
+import express from 'express';
 import TransferRequest from '../models/TransferRequest.js';
 import LabSystem from '../models/LabSystem.js';
 import Laboratory from '../models/Laboratory.js';
