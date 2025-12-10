@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { transferAPI, labSystemAPI, laboratoryAPI } from '@/services/api';
+import { actionsAPI, labSystemAPI, laboratoryAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowRightLeft, Loader2, Send, X, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
@@ -30,23 +30,29 @@ interface Location {
 
 interface TransferRequest {
   _id: string;
-  equipmentSnapshot: {
+  equipmentSnapshot?: {
     sysID: string;
     processor?: string;
     ram?: string;
   };
-  sourceLocation: {
+  previousState?: {
+    sysID?: string;
+    labName?: string;
+  };
+  sourceLocation?: {
     _id: string;
     name: string;
     type: string;
   };
-  destinationLocation: {
+  destinationLocation?: {
     _id: string;
     name: string;
     type: string;
   };
+  sourceLabName?: string;
+  destinationLabName?: string;
   status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  requestedAt: string;
+  createdAt: string;
   notes?: string;
   rejectionReason?: string;
 }
@@ -131,9 +137,13 @@ const EquipmentTransfer = () => {
 
   const fetchTransferRequests = async () => {
     try {
-      const response: any = await transferAPI.getAll();
+      const response: any = await actionsAPI.getHistory();
       if (response && response.data) {
-        setTransferRequests(response.data);
+        // Filter only transfer requests
+        const transfers = response.data.filter((req: any) =>
+          req.actionType === 'transfer' || req.equipmentId
+        );
+        setTransferRequests(transfers);
       }
     } catch (error) {
       console.error('Error fetching transfer requests:', error);
@@ -163,16 +173,26 @@ const EquipmentTransfer = () => {
 
     setIsSubmitting(true);
     try {
-      await transferAPI.createRequest({
-        equipmentId: selectedEquipment,
+      // Get destination location name
+      const destLocation = allLocations.find(loc => loc._id === destinationLocation);
+
+      await actionsAPI.submit({
+        actionType: 'transfer',
+        targetModel: 'LabSystem',
+        entityId: selectedEquipment,
         sourceLocation: selectedLocation,
         destinationLocation: destinationLocation,
+        data: {
+          destinationName: destLocation?.name
+        },
         notes: notes || undefined,
       });
 
       toast({
         title: "Success",
-        description: "Transfer request submitted successfully",
+        description: user?.role === 'admin'
+          ? "Equipment transferred successfully"
+          : "Transfer request submitted for admin approval",
       });
 
       // Reset form
@@ -196,7 +216,7 @@ const EquipmentTransfer = () => {
 
   const handleCancelRequest = async (requestId: string) => {
     try {
-      await transferAPI.cancel(requestId);
+      await actionsAPI.cancel(requestId);
       toast({
         title: "Success",
         description: "Transfer request cancelled",
@@ -396,12 +416,16 @@ const EquipmentTransfer = () => {
                   {transferRequests.map((request) => (
                     <TableRow key={request._id}>
                       <TableCell className="font-medium">
-                        {request.equipmentSnapshot.sysID}
+                        {request.equipmentSnapshot?.sysID || request.previousState?.sysID || 'Unknown System'}
                       </TableCell>
-                      <TableCell>{request.sourceLocation.name}</TableCell>
-                      <TableCell>{request.destinationLocation.name}</TableCell>
                       <TableCell>
-                        {format(new Date(request.requestedAt), 'MMM d, yyyy')}
+                        {request.sourceLocation?.name || request.sourceLabName || 'Unknown Source'}
+                      </TableCell>
+                      <TableCell>
+                        {request.destinationLocation?.name || request.destinationLabName || 'Unknown Destination'}
+                      </TableCell>
+                      <TableCell>
+                        {request.createdAt ? format(new Date(request.createdAt), 'MMM d, yyyy') : '-'}
                       </TableCell>
                       <TableCell>{getStatusBadge(request.status)}</TableCell>
                       <TableCell className="text-right">

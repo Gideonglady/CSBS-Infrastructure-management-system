@@ -15,7 +15,7 @@ const getModel = (modelName) => {
     switch (modelName) {
         case 'LabSystem': return LabSystem;
         case 'Laboratory': return Laboratory;
-        case 'Classroom': return Laboratory; 
+        case 'Classroom': return Laboratory;
         default: return null;
     }
 };
@@ -53,7 +53,7 @@ const notifyUser = async (userId, title, message, type = 'info') => {
             type
         });
     } catch (error) {
-         console.error('Failed to notify user:', error);
+        console.error('Failed to notify user:', error);
     }
 };
 
@@ -82,8 +82,8 @@ const executeAction = async (actionRequest, userId) => {
         case 'update':
             // If updating a Laboratory/Classroom, we might need to be careful not to overwrite everything if not intended
             result = await Model.findByIdAndUpdate(
-                actionRequest.entityId, 
-                actionRequest.data, 
+                actionRequest.entityId,
+                actionRequest.data,
                 { new: true, runValidators: true }
             );
             break;
@@ -103,22 +103,60 @@ const executeAction = async (actionRequest, userId) => {
             }
             break;
 
+
         case 'transfer':
-             // For LabSystem transfer
-             if (actionRequest.targetModel === 'LabSystem') {
-                 // Ensure we update sno? Or keep it? keeping for now.
-                 const updates = {
-                     labName: actionRequest.data.destinationName, 
-                 };
-                 // If moving to new lab, maybe update sno to match new lab sequence?
-                 // For now, let's just move it.
-                 
-                 await Model.findByIdAndUpdate(
-                     actionRequest.entityId,
-                     updates
-                 );
-             }
-             break;
+            // For LabSystem transfer
+            if (actionRequest.targetModel === 'LabSystem') {
+                // Get the equipment
+                const equipment = await LabSystem.findById(actionRequest.entityId || actionRequest.equipmentId);
+                if (!equipment) {
+                    throw new Error('Equipment not found');
+                }
+
+                // Get destination location
+                let destinationLab;
+                if (actionRequest.destinationLocation) {
+                    destinationLab = await Laboratory.findById(actionRequest.destinationLocation);
+                } else if (actionRequest.destinationLabName) {
+                    destinationLab = await Laboratory.findOne({ name: actionRequest.destinationLabName });
+                } else if (actionRequest.data?.destinationName) {
+                    destinationLab = await Laboratory.findOne({ name: actionRequest.data.destinationName });
+                }
+
+                if (!destinationLab) {
+                    throw new Error('Destination location not found');
+                }
+
+                // Get highest sno in destination lab
+                const highestSnoSystem = await LabSystem.findOne({ labName: destinationLab.name })
+                    .sort({ sno: -1 })
+                    .limit(1);
+                const newSno = highestSnoSystem ? highestSnoSystem.sno + 1 : 1;
+
+                // Store old lab name for history
+                const oldLabName = equipment.labName;
+
+                // Update equipment
+                equipment.labName = destinationLab.name;
+                equipment.sno = newSno;
+
+                // Add to transfer history
+                if (!equipment.transferHistory) {
+                    equipment.transferHistory = [];
+                }
+                equipment.transferHistory.push({
+                    fromLocation: oldLabName,
+                    toLocation: destinationLab.name,
+                    transferDate: new Date(),
+                    transferredBy: actionRequest.requestedBy,
+                    approvedBy: userId,
+                });
+                equipment.lastTransferDate = new Date();
+
+                await equipment.save();
+                result = equipment;
+            }
+            break;
     }
 
     actionRequest.status = 'approved'; // Or 'executed'
@@ -141,8 +179,8 @@ router.post('/', protect, async (req, res) => {
         if (entityId && (actionType === 'update' || actionType === 'delete' || actionType === 'transfer')) {
             const Model = getModel(targetModel);
             if (Model) {
-                 const currentEntity = await Model.findById(entityId);
-                 if (currentEntity) previousState = currentEntity.toObject();
+                const currentEntity = await Model.findById(entityId);
+                if (currentEntity) previousState = currentEntity.toObject();
             }
         }
 
@@ -186,10 +224,10 @@ router.post('/', protect, async (req, res) => {
         if (user.role === 'admin') {
             await executeAction(newRequest, user._id);
             // newRequest is saved inside executeAction
-            
 
 
-             return res.status(200).json({
+
+            return res.status(200).json({
                 success: true,
                 message: 'Action executed successfully',
                 data: newRequest
@@ -201,7 +239,7 @@ router.post('/', protect, async (req, res) => {
 
         // Notify Admin
         await notifyAdmins(
-            'New Action Request', 
+            'New Action Request',
             `${user.name} requested to ${actionType} a ${targetModel}.`,
             '/digital-registers/laboratories' // Direct link concept
         );
@@ -250,11 +288,11 @@ router.get('/history', protect, async (req, res) => {
             .populate('approvedBy', 'name email')
             .populate('sourceLocation', 'name')
             .populate('destinationLocation', 'name')
-             .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 });
 
-         res.json({ success: true, count: requests.length, data: requests });
+        res.json({ success: true, count: requests.length, data: requests });
     } catch (error) {
-         res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
@@ -272,6 +310,13 @@ router.put('/:id/approve', protect, authorize('admin'), async (req, res) => {
             return res.status(400).json({ success: false, message: 'Request is not pending' });
         }
 
+        // Backward compatibility: if actionType is not set, assume it's a transfer
+        if (!request.actionType && request.equipmentId) {
+            request.actionType = 'transfer';
+            request.targetModel = 'LabSystem';
+            request.entityId = request.equipmentId;
+        }
+
         await executeAction(request, req.user._id);
 
         // Notify Requester
@@ -284,8 +329,12 @@ router.put('/:id/approve', protect, authorize('admin'), async (req, res) => {
 
         res.json({ success: true, message: 'Request approved and executed', data: request });
     } catch (error) {
-         console.error('Error approving action:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        console.error('Error approving action:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
     }
 });
 
@@ -302,7 +351,7 @@ router.put('/:id/reject', protect, authorize('admin'), async (req, res) => {
         }
 
         if (request.status !== 'pending') {
-             return res.status(400).json({ success: false, message: 'Request is not pending' });
+            return res.status(400).json({ success: false, message: 'Request is not pending' });
         }
 
         request.status = 'rejected';
@@ -332,30 +381,30 @@ router.post('/:id/revert', protect, authorize('admin'), async (req, res) => {
     try {
         const request = await TransferRequest.findById(req.params.id);
         if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
-        
+
         if (request.status !== 'approved') return res.status(400).json({ success: false, message: 'Only executed actions can be reverted' });
 
         const Model = getModel(request.targetModel);
         if (!Model) return res.status(400).json({ success: false, message: 'Invalid model' });
 
         if (request.actionType === 'create') {
-             // Undo Create -> Delete
-             await Model.findByIdAndDelete(request.entityId);
+            // Undo Create -> Delete
+            await Model.findByIdAndDelete(request.entityId);
         } else if (request.actionType === 'delete') {
-             // Undo Delete -> Restore
-             if (request.previousState) {
-                 await Model.create(request.previousState);
-             }
+            // Undo Delete -> Restore
+            if (request.previousState) {
+                await Model.create(request.previousState);
+            }
         } else {
-             // Undo Update/Transfer -> Restore previousState
-             if (request.previousState) {
-                 await Model.findByIdAndUpdate(request.entityId, request.previousState, { new: true });
-             }
+            // Undo Update/Transfer -> Restore previousState
+            if (request.previousState) {
+                await Model.findByIdAndUpdate(request.entityId, request.previousState, { new: true });
+            }
         }
 
         request.status = 'reverted';
         await request.save();
-        
+
         await notifyAdmins('Action Reverted', `Action ${request._id} was reverted`, '/', req.user._id);
 
         res.json({ success: true, message: 'Action reverted successfully' });

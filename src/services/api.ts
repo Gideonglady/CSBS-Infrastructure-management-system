@@ -308,6 +308,10 @@ export const actionsAPI = {
         const response = await api.post(`/api/actions/${id}/revert`);
         return response;
     },
+    cancel: async (id: string) => {
+        const response = await api.delete(`/api/transfer-requests/${id}`);
+        return response;
+    },
 };
 
 export default api;

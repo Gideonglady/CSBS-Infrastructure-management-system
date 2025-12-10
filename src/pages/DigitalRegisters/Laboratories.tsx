@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { labSystemAPI, actionsAPI } from '@/services/api';
+import { labSystemAPI, actionsAPI, laboratoryAPI } from '@/services/api';
 import ActionHistoryDialog from '@/components/ActionHistoryDialog';
 import SystemActionDialog from '@/components/SystemActionDialog';
 import { useToast } from '@/hooks/use-toast';
@@ -41,7 +41,7 @@ const Laboratories = () => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [dialogSearchTerm, setDialogSearchTerm] = useState('');
   const [dialogFilter, setDialogFilter] = useState('all');
-  
+
   const { toast } = useToast();
   const { user } = useAuth(); // potentially use for role checks
 
@@ -52,9 +52,24 @@ const Laboratories = () => {
     system?: any;
   }>({ isOpen: false, type: null });
 
+  const [allLocations, setAllLocations] = useState<string[]>([]);
+
   useEffect(() => {
     fetchLabs();
+    fetchAllLocations();
   }, []);
+
+  const fetchAllLocations = async () => {
+    try {
+      // Fetch ALL locations for transfer destinations
+      const response: any = await laboratoryAPI.getAll({ includeAll: 'true' });
+      if (response && response.data) {
+        setAllLocations(response.data.map((loc: any) => loc.name));
+      }
+    } catch (error) {
+      console.error('Error fetching all locations', error);
+    }
+  };
 
   useEffect(() => {
     // Filter labs based on search term
@@ -88,7 +103,7 @@ const Laboratories = () => {
       setDetailsLoading(true);
       setSelectedLab(labName);
       setIsDialogOpen(true);
-      
+
       const response: any = await labSystemAPI.getByLabName(labName);
       if (response && response.success) {
         setLabSystems(response.data);
@@ -110,7 +125,7 @@ const Laboratories = () => {
 
   const handleDelete = async (systemId: string) => {
     if (!confirm('Are you sure you want to delete this system? This action will be logged.')) return;
-    
+
     try {
       const response: any = await actionsAPI.submit({
         actionType: 'delete',
@@ -119,18 +134,18 @@ const Laboratories = () => {
         notes: 'User requested deletion via Digital Registry'
       });
 
-      toast({ 
-        title: 'Request Submitted', 
-        description: response.data.status === 'approved' ? 'Item deleted.' : 'Deletion request pending approval.' 
+      toast({
+        title: 'Request Submitted',
+        description: response.data.status === 'approved' ? 'Item deleted.' : 'Deletion request pending approval.'
       });
-      
+
       // Refresh list if approved immediately or just to show pending state if we tracked it
       if (response.data.status === 'approved' && selectedLab) {
-         handleViewDetails(selectedLab); 
+        handleViewDetails(selectedLab);
       }
     } catch (error) {
-       console.error('Delete failed', error);
-       toast({ title: 'Error', description: 'Failed to delete system', variant: 'destructive' });
+      console.error('Delete failed', error);
+      toast({ title: 'Error', description: 'Failed to delete system', variant: 'destructive' });
     }
   };
 
@@ -141,8 +156,8 @@ const Laboratories = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-            <h1 className="text-3xl font-bold">Laboratory Registers</h1>
-            <p className="text-gray-600">CSBS Department - Laboratory Infrastructure</p>
+          <h1 className="text-3xl font-bold">Laboratory Registers</h1>
+          <p className="text-gray-600">CSBS Department - Laboratory Infrastructure</p>
         </div>
         <ActionHistoryDialog />
       </div>
@@ -266,13 +281,13 @@ const Laboratories = () => {
         <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
           <DialogHeader className="flex flex-row justify-between items-center pr-8">
             <div>
-                <DialogTitle>{selectedLab} - System Details</DialogTitle>
-                <DialogDescription>
+              <DialogTitle>{selectedLab} - System Details</DialogTitle>
+              <DialogDescription>
                 Complete information about all systems in this laboratory
-                </DialogDescription>
+              </DialogDescription>
             </div>
             <Button onClick={() => handleAction('create')} className="gap-2">
-                <Plus className="w-4 h-4" /> Add System
+              <Plus className="w-4 h-4" /> Add System
             </Button>
           </DialogHeader>
 
@@ -293,7 +308,7 @@ const Laboratories = () => {
                     className="pl-10"
                   />
                 </div>
-                
+
                 <Select
                   value={dialogFilter}
                   onValueChange={setDialogFilter}
@@ -335,11 +350,11 @@ const Laboratories = () => {
                   {labSystems
                     .filter(system => {
                       // Text Search
-                      const matchesSearch = !dialogSearchTerm || 
+                      const matchesSearch = !dialogSearchTerm ||
                         system.sysID.toLowerCase().includes(dialogSearchTerm.toLowerCase()) ||
                         (system.processor && system.processor.toLowerCase().includes(dialogSearchTerm.toLowerCase())) ||
                         (system.softwareAvailable && system.softwareAvailable.toLowerCase().includes(dialogSearchTerm.toLowerCase()));
-                      
+
                       // Dropdown Filter
                       let matchesFilter = true;
                       if (dialogFilter && dialogFilter !== 'all') {
@@ -354,32 +369,32 @@ const Laboratories = () => {
                       return matchesSearch && matchesFilter;
                     })
                     .map((system, index) => (
-                    <TableRow key={system._id}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className="font-medium">{system.sysID}</TableCell>
-                      {labSystems.some(s => s.processor) && <TableCell>{system.processor || '-'}</TableCell>}
-                      {labSystems.some(s => s.ram) && <TableCell>{system.ram || '-'}</TableCell>}
-                      {labSystems.some(s => s.hdd) && <TableCell>{system.hdd || '-'}</TableCell>}
-                      {labSystems.some(s => s.softwareAvailable) && (
-                        <TableCell className="whitespace-pre-wrap" title={system.softwareAvailable}>
-                          {system.softwareAvailable || '-'}
-                        </TableCell>
-                      )}
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleAction('update', system)} title="Edit">
-                                <Pencil className="h-4 w-4 text-blue-600" />
+                      <TableRow key={system._id}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className="font-medium">{system.sysID}</TableCell>
+                        {labSystems.some(s => s.processor) && <TableCell>{system.processor || '-'}</TableCell>}
+                        {labSystems.some(s => s.ram) && <TableCell>{system.ram || '-'}</TableCell>}
+                        {labSystems.some(s => s.hdd) && <TableCell>{system.hdd || '-'}</TableCell>}
+                        {labSystems.some(s => s.softwareAvailable) && (
+                          <TableCell className="whitespace-pre-wrap" title={system.softwareAvailable}>
+                            {system.softwareAvailable || '-'}
+                          </TableCell>
+                        )}
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleAction('update', system)} title="Edit">
+                              <Pencil className="h-4 w-4 text-blue-600" />
                             </Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleAction('transfer', system)} title="Transfer">
-                                <ArrowRightLeft className="h-4 w-4 text-orange-600" />
+                              <ArrowRightLeft className="h-4 w-4 text-orange-600" />
                             </Button>
                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleDelete(system._id)} title="Delete">
-                                <Trash2 className="h-4 w-4 text-red-600" />
+                              <Trash2 className="h-4 w-4 text-red-600" />
                             </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                 </TableBody>
               </Table>
             </div>
@@ -387,16 +402,16 @@ const Laboratories = () => {
         </DialogContent>
       </Dialog>
 
-      <SystemActionDialog 
+      <SystemActionDialog
         isOpen={actionDialog.isOpen}
         onClose={() => setActionDialog({ ...actionDialog, isOpen: false })}
         actionType={actionDialog.type}
         system={actionDialog.system}
         labName={selectedLab || ''}
-        allLabs={labs.map(l => l.labName)}
+        allLabs={allLocations}
         onSuccess={() => {
-            fetchLabs(); // Refresh main stats/list
-            if (selectedLab) handleViewDetails(selectedLab);
+          fetchLabs(); // Refresh main stats/list
+          if (selectedLab) handleViewDetails(selectedLab);
         }}
       />
     </div>

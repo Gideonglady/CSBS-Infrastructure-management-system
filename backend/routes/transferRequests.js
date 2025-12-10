@@ -1,7 +1,8 @@
-import express from 'express';
 import TransferRequest from '../models/TransferRequest.js';
 import LabSystem from '../models/LabSystem.js';
 import Laboratory from '../models/Laboratory.js';
+import Notification from '../models/Notification.js';
+import User from '../models/User.js';
 import { protect } from '../middleware/auth.js';
 import { canTransferFromLocation, validateDestinationLocation } from '../middleware/transferAuth.js';
 
@@ -53,6 +54,25 @@ router.post(
                 { path: 'destinationLocation', select: 'name type building floor' },
                 { path: 'requestedBy', select: 'name email' },
             ]);
+
+            // Notify all admins about the new transfer request
+            try {
+                const admins = await User.find({ role: 'admin', isActive: true });
+                const notifications = admins.map(admin => ({
+                    userId: admin._id,
+                    title: 'New Equipment Transfer Request',
+                    message: `${req.user.name} has requested to transfer equipment from ${transferRequest.sourceLocation.name} to ${transferRequest.destinationLocation.name}`,
+                    type: 'warning',
+                    actionUrl: '/admin/transfer-approvals'
+                }));
+
+                if (notifications.length > 0) {
+                    await Notification.insertMany(notifications);
+                }
+            } catch (notifError) {
+                console.error('Failed to create notifications:', notifError);
+                // Don't fail the request if notification fails
+            }
 
             res.status(201).json({
                 success: true,
@@ -244,6 +264,18 @@ router.put('/:id/approve', protect, async (req, res) => {
             { path: 'approvedBy', select: 'name email' },
         ]);
 
+        // Notify requester about approval
+        try {
+            await Notification.create({
+                userId: request.requestedBy._id,
+                title: 'Transfer Request Approved',
+                message: `Your equipment transfer request from ${request.sourceLocation.name} to ${request.destinationLocation.name} has been approved`,
+                type: 'success'
+            });
+        } catch (notifError) {
+            console.error('Failed to create approval notification:', notifError);
+        }
+
         res.json({
             success: true,
             message: 'Transfer request approved and equipment moved successfully',
@@ -311,6 +343,18 @@ router.put('/:id/reject', protect, async (req, res) => {
             { path: 'requestedBy', select: 'name email' },
             { path: 'approvedBy', select: 'name email' },
         ]);
+
+        // Notify requester about rejection
+        try {
+            await Notification.create({
+                userId: request.requestedBy._id,
+                title: 'Transfer Request Rejected',
+                message: `Your equipment transfer request has been rejected. Reason: ${rejectionReason}`,
+                type: 'error'
+            });
+        } catch (notifError) {
+            console.error('Failed to create rejection notification:', notifError);
+        }
 
         res.json({
             success: true,
