@@ -19,6 +19,40 @@ const AdminDashboard = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [filteredIssues, setFilteredIssues] = useState<Issue[]>([]);
   const [latestNotification, setLatestNotification] = useState<any>(null);
+  const [labStats, setLabStats] = useState<any[]>([]);
+
+  // Load lab stats
+  useEffect(() => {
+    const loadLabStats = async () => {
+      try {
+        const { labSystemAPI } = await import('@/services/api');
+        const response: any = await labSystemAPI.getLabsSummary();
+        if (response && response.success && response.data) {
+          const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#a4de6c', '#d0ed57', '#a4c8e0'];
+          
+          const nameMapping: { [key: string]: string } = {
+            'Agile Software Engineering Lab': 'Agile',
+            'Integrated Business Application Lab': 'IBA',
+            'Integrated Business Environment Lab': 'IBA', // Handling user's variation just in case
+            'Smart and Secure Environment Lab': 'SSE'
+          };
+
+          const formattedStats = response.data
+            .filter((lab: any) => !lab.labName.toLowerCase().includes('office')) // Remove CSBS Dept Office
+            .map((lab: any, index: number) => ({
+              name: nameMapping[lab.labName] || lab.labName, // Use shortform or original
+              value: lab.systemCount,
+              color: COLORS[index % COLORS.length]
+            }));
+            
+          setLabStats(formattedStats);
+        }
+      } catch (error) {
+        console.error('Error loading lab stats:', error);
+      }
+    };
+    loadLabStats();
+  }, []);
 
   const { notifications, unreadCount, markAsRead } = useNotifications('admin');
 
@@ -193,19 +227,14 @@ const AdminDashboard = () => {
           {/* Equipment Availability Chart */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Equipment Availability</CardTitle>
+              <CardTitle className="text-lg">Systems by Lab</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[250px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={[
-                        { name: 'Projectors', value: 45, color: '#0088FE' },
-                        { name: 'Computers', value: 120, color: '#00C49F' },
-                        { name: 'Printers', value: 15, color: '#FFBB28' },
-                        { name: 'Smart Boards', value: 25, color: '#FF8042' }
-                      ]}
+                      data={labStats}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -214,12 +243,7 @@ const AdminDashboard = () => {
                       dataKey="value"
                       label={({ value }) => value}
                     >
-                      {[
-                        { name: 'Projectors', value: 45, color: '#0088FE' },
-                        { name: 'Computers', value: 120, color: '#00C49F' },
-                        { name: 'Printers', value: 15, color: '#FFBB28' },
-                        { name: 'Smart Boards', value: 25, color: '#FF8042' }
-                      ].map((entry, index) => (
+                      {labStats.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>

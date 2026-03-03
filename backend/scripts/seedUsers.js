@@ -50,28 +50,27 @@ const seedUsers = async () => {
                 mustChangePassword: true
             },
         ];
-        ];
 
-// Insert users
-for (const userData of users) {
-    const user = new User(userData);
-    await user.save();
-    console.log(`✅ Created user: ${userData.email} (${userData.role})`);
-}
+        // Insert users
+        for (const userData of users) {
+            const user = new User(userData);
+            await user.save();
+            console.log(`✅ Created user: ${userData.email} (${userData.role})`);
+        }
 
-console.log('\n🎉 Database seeded successfully!');
-console.log('\n📋 Demo Credentials:');
-console.log('==========================================');
-users.forEach(user => {
-    console.log(`${user.role.toUpperCase()}: ${user.email} / ${user.password}`);
-});
-console.log('==========================================\n');
+        console.log('\n🎉 Database seeded successfully!');
+        console.log('\n📋 Demo Credentials:');
+        console.log('==========================================');
+        users.forEach(user => {
+            console.log(`${user.role.toUpperCase()}: ${user.email} / ${user.password}`);
+        });
+        console.log('==========================================\n');
 
-process.exit(0);
+        process.exit(0);
     } catch (error) {
-    console.error('❌ Error seeding database:', error);
-    process.exit(1);
-}
+        console.error('❌ Error seeding database:', error);
+        process.exit(1);
+    }
 };
 
 seedUsers();
