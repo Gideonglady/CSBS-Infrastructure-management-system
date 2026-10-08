@@ -15,7 +15,6 @@ import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import DashboardSimple from "./pages/Dashboard-simple";
 import DigitalRegistersHome from "./pages/DigitalRegisters/DigitalRegistersHome";
 import Classrooms from "./pages/DigitalRegisters/Classrooms";
 import Laboratories from "./pages/DigitalRegisters/Laboratories";
@@ -26,8 +25,6 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminIssueManagement from "./pages/AdminIssueManagement";
 import UserManagement from "./pages/UserManagement";
 import MyIssues from "./pages/MyIssues";
-import MyIssuesTest from "./pages/MyIssues-test";
-import MyIssuesSimple from "./pages/MyIssues-simple";
 import PendingApprovals from "./pages/PendingApprovals";
 import EquipmentTransfer from "./pages/EquipmentTransfer";
 import TransferApproval from "./pages/Admin/TransferApproval";
@@ -204,7 +201,7 @@ const App = () => (
                     <Layout>
                       <Routes>
                         <Route path="dashboard" element={<Dashboard />} />
-                        <Route path="issues" element={<div>Faculty Issues</div>} />
+                        <Route path="issues" element={<MyIssues />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

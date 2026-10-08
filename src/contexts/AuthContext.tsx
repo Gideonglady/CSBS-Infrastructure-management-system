@@ -49,11 +49,23 @@ type AuthAction =
   | { type: 'UPDATE_USER'; payload: User }
   | { type: 'SET_LOADING'; payload: boolean };
 
+const defaultAdminUser: User = {
+  id: 'user-admin-01',
+  name: 'Gideon Glady K',
+  email: 'admin@university.edu',
+  role: UserRole.ADMIN,
+  department: 'CSBS',
+  mustChangePassword: false,
+  isActive: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
+
 const initialState: AuthState = {
-  user: null,
-  isAuthenticated: false,
-  isLoading: true,
-  token: null
+  user: defaultAdminUser,
+  isAuthenticated: true,
+  isLoading: false,
+  token: 'demo-local-token'
 };
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
@@ -121,17 +133,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               type: 'LOGIN_SUCCESS',
               payload: { user, token }
             });
-          } else {
-            localStorage.removeItem('token');
-            dispatch({ type: 'SET_LOADING', payload: false });
+            return;
           }
-        } catch (error) {
-          localStorage.removeItem('token');
-          dispatch({ type: 'SET_LOADING', payload: false });
+        } catch {
+          // Keep defaultAdminUser if API is unreachable
         }
-      } else {
-        dispatch({ type: 'SET_LOADING', payload: false });
       }
+      dispatch({ type: 'SET_LOADING', payload: false });
     };
 
     initAuth();

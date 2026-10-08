@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { authAPI, userAPI, laboratoryAPI } from '@/services/api';
-import { Loader2, UserPlus, Search, RefreshCw, AlertCircle, Eye, EyeOff, Trash2, MapPin } from 'lucide-react';
+import { Loader2, UserPlus, Search, RefreshCw, AlertCircle, Eye, EyeOff, Trash2, MapPin, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import {
     AlertDialog,
@@ -67,6 +67,8 @@ const UserManagement = () => {
         password: '',
         role: 'staff'
     });
+
+    const [editingUser, setEditingUser] = useState<User | null>(null);
 
     const fetchUsers = async () => {
         setIsFetching(true);
@@ -139,6 +141,18 @@ const UserManagement = () => {
         }
     };
 
+    const handleEditUser = (user: User) => {
+        setEditingUser(user);
+        setFormData({
+            name: user.name,
+            email: user.email,
+            password: '', // Don't populate password
+            role: user.role
+        });
+        setSelectedLocations(user.assignedLocations?.map(loc => loc._id) || []);
+        setIsDialogOpen(true);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -149,12 +163,21 @@ const UserManagement = () => {
                 assignedLocations: selectedLocations
             };
 
-            const response: any = await authAPI.createUser(userData);
+            let response: any;
+            if (editingUser) {
+                // Remove password if empty during edit
+                if (!userData.password) {
+                    delete (userData as any).password;
+                }
+                response = await userAPI.update(editingUser._id, userData);
+            } else {
+                response = await authAPI.createUser(userData);
+            }
 
             if (response.status === 201 || response.success) {
                 toast({
                     title: "Success",
-                    description: "User created successfully",
+                    description: editingUser ? "User updated successfully" : "User created successfully",
                     variant: "default",
                 });
                 // Reset form
@@ -165,12 +188,13 @@ const UserManagement = () => {
                     role: 'staff'
                 });
                 setSelectedLocations([]);
+                setEditingUser(null);
                 setIsDialogOpen(false);
                 fetchUsers(); // Refresh list
             } else {
                 toast({
                     title: "Error",
-                    description: response.message || "Failed to create user",
+                    description: response.message || (editingUser ? "Failed to update user" : "Failed to create user"),
                     variant: "destructive",
                 });
             }
@@ -217,18 +241,30 @@ const UserManagement = () => {
                     <h2 className="text-3xl font-bold tracking-tight">User Management</h2>
                     <p className="text-muted-foreground">Manage system users and their roles.</p>
                 </div>
-                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <Dialog open={isDialogOpen} onOpenChange={(open) => {
+                    setIsDialogOpen(open);
+                    if (!open) {
+                        setEditingUser(null);
+                        setFormData({
+                            name: '',
+                            email: '',
+                            password: '',
+                            role: 'staff'
+                        });
+                        setSelectedLocations([]);
+                    }
+                }}>
                     <DialogTrigger asChild>
-                        <Button className="shrink-0">
+                        <Button className="shrink-0" onClick={() => setEditingUser(null)}>
                             <UserPlus className="mr-2 h-4 w-4" />
                             Create User
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Create New User</DialogTitle>
+                            <DialogTitle>{editingUser ? 'Edit User' : 'Create New User'}</DialogTitle>
                             <DialogDescription>
-                                Add a new user to the system. They will receive their credentials via email.
+                                {editingUser ? 'Update user details and location assignments.' : 'Add a new user to the system. They will receive their credentials via email.'}
                             </DialogDescription>
                         </DialogHeader>
                         <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -254,7 +290,7 @@ const UserManagement = () => {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="password">Password</Label>
+                                <Label htmlFor="password">Password {editingUser && '(Leave blank to keep current)'}</Label>
                                 <div className="relative">
                                     <Input
                                         id="password"
@@ -262,8 +298,8 @@ const UserManagement = () => {
                                         type={showPassword ? "text" : "password"}
                                         value={formData.password}
                                         onChange={handleChange}
-                                        required
-                                        minLength={6}
+                                        required={!editingUser}
+                                        minLength={editingUser ? undefined : 6}
                                         className="pr-10"
                                     />
                                     <button
@@ -293,47 +329,49 @@ const UserManagement = () => {
                                 </Select>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label>Assigned Locations (Optional)</Label>
-                                <p className="text-sm text-muted-foreground">Select classrooms and laboratories to assign to this user</p>
-                                <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
-                                    {locations.length === 0 ? (
-                                        <p className="text-sm text-muted-foreground text-center py-4">No locations available</p>
-                                    ) : (
-                                        locations.map((location) => (
-                                            <div key={location._id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
-                                                <Checkbox
-                                                    id={`location-${location._id}`}
-                                                    checked={selectedLocations.includes(location._id)}
-                                                    onCheckedChange={() => handleLocationToggle(location._id)}
-                                                />
-                                                <label
-                                                    htmlFor={`location-${location._id}`}
-                                                    className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <span>{location.name}</span>
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {location.type}
-                                                        </Badge>
-                                                        {location.building && (
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {location.building}
-                                                                {location.floor && `, Floor ${location.floor}`}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        ))
+                            {formData.role !== 'class_rep' && (
+                                <div className="space-y-2">
+                                    <Label>Assigned Locations (Optional)</Label>
+                                    <p className="text-sm text-muted-foreground">Select classrooms and laboratories to assign to this user</p>
+                                    <div className="border rounded-md p-4 max-h-60 overflow-y-auto space-y-2">
+                                        {locations.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground text-center py-4">No locations available</p>
+                                        ) : (
+                                            locations.map((location) => (
+                                                <div key={location._id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded">
+                                                    <Checkbox
+                                                        id={`location-${location._id}`}
+                                                        checked={selectedLocations.includes(location._id)}
+                                                        onCheckedChange={() => handleLocationToggle(location._id)}
+                                                    />
+                                                    <label
+                                                        htmlFor={`location-${location._id}`}
+                                                        className="flex-1 text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{location.name}</span>
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {location.type}
+                                                            </Badge>
+                                                            {location.building && (
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    {location.building}
+                                                                    {location.floor && `, Floor ${location.floor}`}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                    {selectedLocations.length > 0 && (
+                                        <p className="text-sm text-muted-foreground">
+                                            {selectedLocations.length} location(s) selected
+                                        </p>
                                     )}
                                 </div>
-                                {selectedLocations.length > 0 && (
-                                    <p className="text-sm text-muted-foreground">
-                                        {selectedLocations.length} location(s) selected
-                                    </p>
-                                )}
-                            </div>
+                            )}
 
                             <div className="flex justify-end pt-4 gap-2">
                                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
@@ -341,12 +379,16 @@ const UserManagement = () => {
                                     {isLoading ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Creating...
+                                            {editingUser ? 'Updating...' : 'Creating...'}
                                         </>
                                     ) : (
                                         <>
-                                            <UserPlus className="mr-2 h-4 w-4" />
-                                            Create User
+                                            {editingUser ? (
+                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                            ) : (
+                                                <UserPlus className="mr-2 h-4 w-4" />
+                                            )}
+                                            {editingUser ? 'Update User' : 'Create User'}
                                         </>
                                     )}
                                 </Button>
@@ -415,12 +457,17 @@ const UserManagement = () => {
                                                 {getRoleBadge(user.role)}
                                             </TableCell>
                                             <TableCell>
-                                                {user.assignedLocations && user.assignedLocations.length > 0 ? (
-                                                    <div className="flex items-center gap-1">
-                                                        <MapPin className="h-3 w-3 text-muted-foreground" />
-                                                        <span className="text-sm">
-                                                            {user.assignedLocations.length} location(s)
-                                                        </span>
+                                                {user.role === 'class_rep' ? (
+                                                    <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                        All Accessible
+                                                    </Badge>
+                                                ) : user.assignedLocations && user.assignedLocations.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                                        {user.assignedLocations.map((loc) => (
+                                                            <Badge key={loc._id} variant="outline" className="text-[10px] px-1 py-0 h-4 whitespace-nowrap">
+                                                                {loc.name}
+                                                            </Badge>
+                                                        ))}
                                                     </div>
                                                 ) : (
                                                     <span className="text-sm text-muted-foreground">None</span>
@@ -438,15 +485,25 @@ const UserManagement = () => {
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50"
-                                                    onClick={() => setUserToDelete(user._id)}
-                                                    disabled={user.role === 'admin'}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                                                        onClick={() => handleEditUser(user)}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-50"
+                                                        onClick={() => setUserToDelete(user._id)}
+                                                        disabled={user.role === 'admin'}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))

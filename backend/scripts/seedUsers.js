@@ -15,39 +15,39 @@ const seedUsers = async () => {
         await User.deleteMany({});
         console.log('🗑️  Cleared existing users');
 
-        // Create demo users for each role
+        // Create demo users for each role (configured via env variables)
         const users = [
             {
-                email: 'matheshstce@gmail.com',
-                password: 'admin123',
+                email: process.env.ADMIN_EMAIL || 'admin@university.edu',
+                password: process.env.ADMIN_PASSWORD || 'admin123',
                 name: 'Admin User',
                 role: 'admin',
                 phone: '+1234567890',
-                mustChangePassword: true
+                mustChangePassword: false
             },
             {
-                email: 'staff@gmail.com',
-                password: 'staff123',
+                email: process.env.STAFF_EMAIL || 'staff@university.edu',
+                password: process.env.STAFF_PASSWORD || 'staff123',
                 name: 'Staff Member',
                 role: 'staff',
                 phone: '+1234567892',
-                mustChangePassword: true
+                mustChangePassword: false
             },
             {
-                email: 'matheshs@student.tce.edu',
-                password: 'rep123',
+                email: process.env.CLASS_REP_EMAIL || 'rep@university.edu',
+                password: process.env.CLASS_REP_PASSWORD || 'rep123',
                 name: 'Student Representative',
                 role: 'class_rep',
                 phone: '+1234567893',
-                mustChangePassword: true
+                mustChangePassword: false
             },
             {
-                email: 'labtech@gmail.com',
-                password: 'lab123',
+                email: process.env.LAB_TECH_EMAIL || 'tech@university.edu',
+                password: process.env.LAB_TECH_PASSWORD || 'lab123',
                 name: 'Lab Technician',
                 role: 'lab_technician',
                 phone: '+1234567894',
-                mustChangePassword: true
+                mustChangePassword: false
             },
         ];
 

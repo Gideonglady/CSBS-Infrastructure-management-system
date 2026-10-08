@@ -79,6 +79,10 @@ export const userAPI = {
         const response = await api.delete(`/api/users/${id}`);
         return response;
     },
+    update: async (id: string, userData: any) => {
+        const response = await api.put(`/api/users/${id}`, userData);
+        return response;
+    },
     updateUserLocations: async (userId: string, locationIds: string[]) => {
         const response = await api.put(`/api/users/${userId}/locations`, { assignedLocations: locationIds });
         return response;

@@ -8,8 +8,8 @@ import User from '../models/User.js';
  */
 export const checkLocationAccess = async (req, res, next) => {
     try {
-        // Admin has access to everything
-        if (req.user.role === 'admin') {
+        // Admin and Class Rep have access to everything
+        if (req.user.role === 'admin' || req.user.role === 'class_rep') {
             return next();
         }
 
@@ -56,8 +56,8 @@ export const checkLocationAccess = async (req, res, next) => {
  * Returns filter object for MongoDB queries
  */
 export const getLocationFilter = (user) => {
-    // Admin sees everything
-    if (user.role === 'admin') {
+    // Admin and Class Rep see everything
+    if (user.role === 'admin' || user.role === 'class_rep') {
         return {};
     }
 

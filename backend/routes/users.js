@@ -81,6 +81,52 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
 });
 
+// @route   PUT /api/users/:id
+// @desc    Update a user (Admin only)
+// @access  Private/Admin
+router.put('/:id', authMiddleware, async (req, res) => {
+    try {
+        // Check if user is admin
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Not authorized to update users'
+            });
+        }
+
+        const { name, email, role, isActive, assignedLocations } = req.body;
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Update fields if provided
+        if (name) user.name = name;
+        if (email) user.email = email;
+        if (role) user.role = role;
+        if (isActive !== undefined) user.isActive = isActive;
+        if (assignedLocations) user.assignedLocations = assignedLocations;
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'User updated successfully',
+            data: user
+        });
+    } catch (error) {
+        console.error('Update user error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Server error updating user'
+        });
+    }
+});
+
 // @route   PUT /api/users/:id/locations
 // @desc    Update user's assigned locations (Admin only)
 // @access  Private/Admin

@@ -54,7 +54,10 @@ const IssueReporting = () => {
 
       setLoadingLocations(true);
       try {
-        const response: any = await laboratoryAPI.getAll({ type: formData.location.type });
+        const response: any = await laboratoryAPI.getAll({
+          type: formData.location.type,
+          includeAll: 'true'
+        });
         if (response.success && response.data) {
           setLocations(response.data);
         }
@@ -140,8 +143,8 @@ const IssueReporting = () => {
           locationType: formData.location.type,
           id: formData.location.id,
           name: formData.location.name,
-          building: formData.location.building,
-          floor: formData.location.floor,
+          building: formData.location.building || 'Main Building',
+          floor: formData.location.floor || '1',
         },
         urgency: undefined,
         estimatedImpact: undefined,
