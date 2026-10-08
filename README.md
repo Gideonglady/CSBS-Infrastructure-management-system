@@ -8,11 +8,11 @@ I built this project to replace manual paper registers and disconnected spreadsh
 
 ## Screenshots
 
-![Dashboard](public\Dashboard.png)
+![Dashboard](public/Dashboard.png)
 
-![LABS_REGISTER](public\Lab Registers.png)
+![LABS_REGISTER](public/Lab-Registers.png)
 
-![ISSUE_TICKET](public\Admin Issue view.png)
+![ISSUE_TICKET](public/Admin-Issue-view.png)
 
 ## Features
 
