@@ -17,13 +17,13 @@ I built this project to replace manual paper registers and disconnected spreadsh
 ### Lab Registers
 
 <p align="center">
-  <img src="./public/lab-registers.png" alt="Lab Registers" width="900">
+  <img src="./public/Lab-Registers.png" alt="Lab Registers" width="900">
 </p>
 
 ### Issue Management
 
 <p align="center">
-  <img src="./public/admin-issue-view.png" alt="Issue Management" width="900">
+  <img src="./public/Admin-Issue-view.png" alt="Issue Management" width="900">
 </p>
 
 ## Features
