@@ -8,11 +8,11 @@ I built this project to replace manual paper registers and disconnected spreadsh
 
 ## Screenshots
 
-[SCREENSHOT: Dashboard showing room statistics and active issues]
+![Dashboard](public\Dashboard.png)
 
-[SCREENSHOT: Digital Register lab workstation inventory view]
+![LABS_REGISTER](public\Lab Registers.png)
 
-[SCREENSHOT: Admin issue management and equipment transfer approval modal]
+![ISSUE_TICKET](public\Admin Issue view.png)
 
 ## Features
 
