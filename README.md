@@ -8,11 +8,23 @@ I built this project to replace manual paper registers and disconnected spreadsh
 
 ## Screenshots
 
-![Dashboard](public/Dashboard.png)
+### Dashboard
 
-![LABS_REGISTER](public/Lab-Registers.png)
+<p align="center">
+  <img src="./public/Dashboard.png" alt="DIMS Dashboard" width="900">
+</p>
 
-![ISSUE_TICKET](public/Admin-Issue-view.png)
+### Lab Registers
+
+<p align="center">
+  <img src="./public/lab-registers.png" alt="Lab Registers" width="900">
+</p>
+
+### Issue Management
+
+<p align="center">
+  <img src="./public/admin-issue-view.png" alt="Issue Management" width="900">
+</p>
 
 ## Features
 
@@ -101,8 +113,8 @@ The backend verifies the token, resolves user roles, and evaluates location perm
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Gideonglady/infra-stream-net.git
-cd infra-stream-net
+git clone https://github.com/Gideonglady/CSBS-Infrastructure-management-system.git
+cd CSBS-Infrastructure-management-system
 ```
 
 ### 2. Configure Environment Variables
